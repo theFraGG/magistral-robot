@@ -7,11 +7,34 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: #0f172a; color: #f8fafc; font-family: sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
-  header { padding: 14px; background: #0b1120; border-bottom: 1px solid #334155; text-align: center; z-index: 10; }
+  header { padding: 12px 15px; background: #0b1120; border-bottom: 1px solid #334155; text-align: center; z-index: 10; }
   h1 { font-size: 17px; color: #f59e0b; text-transform: uppercase; }
-  p { font-size: 12px; color: #94a3b8; margin-top: 4px; }
-  canvas { width: 100%; flex: 1; display: block; cursor: grab; touch-action: none; }
-  #st { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #94a3b8; font-size: 14px; text-align: center; }
+  p { font-size: 12px; color: #94a3b8; margin-top: 3px; }
+  
+  .main { display: flex; flex: 1; overflow: hidden; position: relative; }
+  .viewer-wrap { flex: 1; position: relative; display: flex; }
+  canvas { width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+  #st { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #94a3b8; font-size: 14px; text-align: center; pointer-events: none; }
+
+  /* Боковая панель со скриншотами (справа на ПК) */
+  .sidebar { width: 150px; background: #0b1120; border-left: 1px solid #334155; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; z-index: 5; }
+  .sidebar-title { font-size: 11px; color: #94a3b8; text-transform: uppercase; text-align: center; letter-spacing: 0.5px; }
+  .thumb { width: 100%; border-radius: 6px; border: 2px solid #334155; cursor: pointer; transition: 0.2s; object-fit: cover; aspect-ratio: 4/3; background: #1e293b; }
+  .thumb:hover { border-color: #f59e0b; transform: scale(1.03); }
+
+  /* Адаптация под телефон (лента снизу) */
+  @media (max-width: 700px) {
+    .main { flex-direction: column; }
+    .sidebar { width: 100%; height: 95px; flex-direction: row; border-left: none; border-top: 1px solid #334155; overflow-x: auto; overflow-y: hidden; align-items: center; padding: 8px; }
+    .sidebar-title { display: none; }
+    .thumb { height: 74px; width: auto; flex-shrink: 0; }
+  }
+
+  /* Всплывающее окно для крупного просмотра скриншота */
+  .modal { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.9); z-index: 100; justify-content: center; align-items: center; padding: 20px; cursor: zoom-out; }
+  .modal.open { display: flex; }
+  .modal img { max-width: 95%; max-height: 90vh; border-radius: 8px; border: 2px solid #f59e0b; box-shadow: 0 0 25px rgba(0,0,0,0.8); }
+  .modal-hint { position: absolute; bottom: 15px; color: #94a3b8; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -19,10 +42,34 @@
   <h1>Робот «Магистраль-Защита»</h1>
   <p>1 палец / мышь — вращение • 2 пальца / колёсико — масштаб</p>
 </header>
-<div id="st">Загрузка 3D-модели...</div>
-<canvas id="c"></canvas>
 
+<div class="main">
+  <div class="viewer-wrap">
+    <div id="st">Загрузка 3D-модели...</div>
+    <canvas id="c"></canvas>
+  </div>
+  
+  <aside class="sidebar">
+    <div class="sidebar-title">Рендеры узлов</div>
+    <img class="thumb" src="./view6.png" alt="Общий вид" onclick="openImg(this.src)">
+    <img class="thumb" src="./view1.png" alt="Вид спереди" onclick="openImg(this.src)">
+    <img class="thumb" src="./view2.png" alt="Вид справа" onclick="openImg(this.src)">
+    <img class="thumb" src="./view3.png" alt="Вид слева" onclick="openImg(this.src)">
+    <img class="thumb" src="./view4.png" alt="Вид сверху" onclick="openImg(this.src)">
+    <img class="thumb" src="./view5.png" alt="Вид снизу" onclick="openImg(this.src)">
+  </aside>
+</div>
+
+<div class="modal" id="modal" onclick="this.classList.remove('open')">
+  <img id="modal-img" src="" alt="Увеличенный вид">
+  <div class="modal-hint">Нажмите в любом месте, чтобы закрыть</div>
+</div>
 <script>
+function openImg(src) {
+  document.getElementById('modal-img').src = src;
+  document.getElementById('modal').classList.add('open');
+}
+
 const c = document.getElementById('c'), st = document.getElementById('st');
 const gl = c.getContext('webgl2') || c.getContext('webgl');
 if (!gl) { st.textContent = 'WebGL не поддерживается'; } else {
@@ -57,6 +104,7 @@ if (!gl) { st.textContent = 'WebGL не поддерживается'; } else {
   let zm = window.innerHeight > window.innerWidth ? 4.8 : 3.2;
   let drag = false, lx = 0, ly = 0, auto = true, pinchDist = 0;
   let cx = 0, cy = 0, cz = 0, ms = 1;
+
   fetch('./robot.glb')
     .then(r => { if (!r.ok) throw new Error('Нет файла robot.glb'); return r.arrayBuffer(); })
     .then(async b => {
