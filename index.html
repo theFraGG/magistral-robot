@@ -1,91 +1,147 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D-модель: Робот «Магистраль-Защита»</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #0f172a; color: #f8fafc; font-family: sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
-        header { padding: 15px; background: rgba(15, 23, 42, 0.9); border-bottom: 1px solid #334155; text-align: center; z-index: 10; }
-        h1 { font-size: 18px; color: #f59e0b; text-transform: uppercase; }
-        p { font-size: 12px; color: #94a3b8; margin-top: 4px; }
-        #canvas-container { width: 100%; flex-grow: 1; position: relative; }
-        #status { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #94a3b8; font-size: 14px; }
-    </style>
-    <script src="https://cloudflare.com"></script>
-    <script src="https://jsdelivr.net"></script>
-    <script src="https://jsdelivr.net"></script>
-    <script src="https://jsdelivr.net"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Робот «Магистраль-Защита»</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0f172a; color: #f8fafc; font-family: sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+  header { padding: 14px; background: #0b1120; border-bottom: 1px solid #334155; text-align: center; }
+  h1 { font-size: 17px; color: #f59e0b; text-transform: uppercase; }
+  p { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+  canvas { width: 100%; flex: 1; display: block; cursor: grab; touch-action: none; }
+  #st { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #94a3b8; font-size: 14px; text-align: center; }
+</style>
 </head>
 <body>
-    <header>
-        <h1>Робот «Магистраль-Защита»</h1>
-        <p>Вращайте одним пальцем / мышкой • Приближайте колёсиком</p>
-    </header>
-    <div id="canvas-container">
-        <div id="status">Загрузка 3D-модели...</div>
-    </div>
+<header>
+  <h1>Робот «Магистраль-Защита»</h1>
+  <p>Вращайте пальцем или мышкой • Колёсико — масштаб</p>
+</header>
+<div id="st">Загрузка 3D-модели...</div>
+<canvas id="c"></canvas>
 
-    <script>
-        const container = document.getElementById('canvas-container');
-        const status = document.getElementById('status');
+<script>
+const c = document.getElementById('c'), st = document.getElementById('st');
+const gl = c.getContext('webgl2') || c.getContext('webgl');
+if (!gl) { st.textContent = 'WebGL не поддерживается'; } else {
+  const vs = 'attribute vec3 p,n;uniform mat4 mvp,m;varying vec3 vn;void main(){vn=mat3(m)*n;gl_Position=mvp*vec4(p,1.);}';
+  const fs = 'precision mediump float;varying vec3 vn;void main(){vec3 n=normalize(vn);float d1=max(dot(n,normalize(vec3(.6,1.,.8))),0.);float d2=max(dot(n,normalize(vec3(-.6,-.4,-.5))),0.)*.35;gl_FragColor=vec4(vec3(.68,.72,.78)*(.3+d1*.85+d2),1.);}';
+  const sh = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); return o; };
+  const pr = gl.createProgram();
+  gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs));
+  gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs));
+  gl.linkProgram(pr); gl.useProgram(pr);
 
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0f172a);
+  const aP = gl.getAttribLocation(pr, 'p'), aN = gl.getAttribLocation(pr, 'n');
+  const uMVP = gl.getUniformLocation(pr, 'mvp'), uM = gl.getUniformLocation(pr, 'm');
 
-        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(container.clientWidth, container.clientHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        container.appendChild(renderer.domElement);
+  const mul = (a, b) => {
+    const r = new Float32Array(16);
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++)
+      r[j*4+i] = a[i]*b[j*4] + a[4+i]*b[j*4+1] + a[8+i]*b[j*4+2] + a[12+i]*b[j*4+3];
+    return r;
+  };
+  const persp = (f, a, n, fr) => {
+    const t = 1 / Math.tan(f / 2), nf = 1 / (n - fr);
+    return new Float32Array([t/a,0,0,0, 0,t,0,0, 0,0,(fr+n)*nf,-1, 0,0,2*fr*n*nf,0]);
+  };
+  const rY = a => new Float32Array([Math.cos(a),0,-Math.sin(a),0, 0,1,0,0, Math.sin(a),0,Math.cos(a),0, 0,0,0,1]);
+  const rX = a => new Float32Array([1,0,0,0, 0,Math.cos(a),Math.sin(a),0, 0,-Math.sin(a),Math.cos(a),0, 0,0,0,1]);
+  const tr = (x, y, z) => new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, x,y,z,1]);
+  const sc = s => new Float32Array([s,0,0,0, 0,s,0,0, 0,0,s,0, 0,0,0,1]);
 
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.autoRotate = true;
-        controls.autoRotateSpeed = 1.5;
+  let meshes = [], ay = 0.6, ax = 0.35, zm = 3.2, drag = false, lx = 0, ly = 0, auto = true;
+  let cx = 0, cy = 0, cz = 0, ms = 1;
 
-        scene.add(new THREE.AmbientLight(0xffffff, 1.3));
-        const dirLight = new THREE.DirectionalLight(0xffffff, 2);
-        dirLight.position.set(5, 10, 7);
-        scene.add(dirLight);
+  fetch('./robot.glb')
+    .then(r => { if (!r.ok) throw new Error('Нет файла robot.glb'); return r.arrayBuffer(); })
+    .then(b => {
+      const dv = new DataView(b);
+      if (dv.getUint32(0, true) !== 0x46546C67) throw new Error('Ошибка формата GLB');
+      const jl = dv.getUint32(12, true);
+      const gltf = JSON.parse(new TextDecoder().decode(new Uint8Array(b, 20, jl)));
+      if (gltf.extensionsRequired && gltf.extensionsRequired.includes('KHR_draco_mesh_compression')) {
+        throw new Error('Экспортируйте robot.glb из Blender БЕЗ галочки Compression!');
+      }
+      const bin = b.slice(28 + jl);
+      const get = idx => {
+        const ac = gltf.accessors[idx], bv = gltf.bufferViews[ac.bufferView];
+        const off = (bv.byteOffset || 0) + (ac.byteOffset || 0);
+        const len = ac.count * ({ SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4 }[ac.type]);
+        if (ac.componentType === 5126) return new Float32Array(bin, off, len);
+        if (ac.componentType === 5123) return new Uint16Array(bin, off, len);
+        if (ac.componentType === 5125) return new Uint32Array(bin, off, len);
+      };
 
-        const dracoLoader = new DRACOLoader();
-        dracoLoader.setDecoderPath('https://gstatic.com');
-
-        const loader = new GLTFLoader();
-        loader.setDRACOLoader(dracoLoader);
-
-        loader.load('./robot.glb', function(gltf) {
-            const model = gltf.scene;
-            const box = new THREE.Box3().setFromObject(model);
-            const center = box.getCenter(new THREE.Vector3());
-            const size = box.getSize(new THREE.Vector3());
-            model.position.sub(center);
-
-            const maxDim = Math.max(size.x, size.y, size.z);
-            camera.position.set(maxDim * 1.4, maxDim * 0.9, maxDim * 1.4);
-            controls.update();
-
-            scene.add(model);
-            status.style.display = 'none';
-        }, undefined, function(error) {
-            status.textContent = 'Ошибка загрузки: ' + error.message;
-            status.style.color = '#ef4444';
-        });
-
-        window.addEventListener('resize', function() {
-            camera.aspect = container.clientWidth / container.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(container.clientWidth, container.clientHeight);
-        });
-
-        function animate() {
-            requestAnimationFrame(animate);
-            controls.update();
-            renderer.render(scene, camera);
+      let minX = 1e9, minY = 1e9, minZ = 1e9, maxX = -1e9, maxY = -1e9, maxZ = -1e9;
+      gltf.meshes.forEach(m => m.primitives.forEach(p => {
+        const pos = get(p.attributes.POSITION);
+        const nrm = p.attributes.NORMAL !== undefined ? get(p.attributes.NORMAL) : pos;
+        const idx = p.indices !== undefined ? get(p.indices) : null;
+        for (let i = 0; i < pos.length; i += 3) {
+          if (pos[i] < minX) minX = pos[i]; if (pos[i] > maxX) maxX = pos[i];
+          if (pos[i+1] < minY) minY = pos[i+1]; if (pos[i+1] > maxY) maxY = pos[i+1];
+          if (pos[i+2] < minZ) minZ = pos[i+2]; if (pos[i+2] > maxZ) maxZ = pos[i+2];
         }
-        animate();
-    </script>
+        const pb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, pb); gl.bufferData(gl.ARRAY_BUFFER, pos, gl.STATIC_DRAW);
+        const nb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, nb); gl.bufferData(gl.ARRAY_BUFFER, nrm, gl.STATIC_DRAW);
+        let ib = null, it = gl.UNSIGNED_SHORT, cnt = pos.length / 3;
+        if (idx) {
+          ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
+          if (idx instanceof Uint32Array) { gl.getExtension('OES_element_index_uint'); it = gl.UNSIGNED_INT; }
+          cnt = idx.length;
+        }
+        meshes.push({ pb, nb, ib, it, cnt });
+      }));
+
+      cx = (minX + maxX) / 2; cy = (minY + maxY) / 2; cz = (minZ + maxZ) / 2;
+      const md = Math.max(maxX - minX, maxY - minY, maxZ - minZ);
+      ms = md > 0 ? 2.0 / md : 1.0;
+      st.style.display = 'none';
+    })
+    .catch(e => { st.textContent = e.message; st.style.color = '#ef4444'; });
+
+  c.addEventListener('pointerdown', e => { drag = true; auto = false; lx = e.clientX; ly = e.clientY; });
+  window.addEventListener('pointerup', () => drag = false);
+  window.addEventListener('pointermove', e => {
+    if (!drag) return;
+    ay += (e.clientX - lx) * 0.01;
+    ax = Math.max(-1.4, Math.min(1.4, ax + (e.clientY - ly) * 0.01));
+    lx = e.clientX; ly = e.clientY;
+  });
+  c.addEventListener('wheel', e => { e.preventDefault(); zm = Math.max(1.2, Math.min(8, zm + e.deltaY * 0.002)); }, { passive: false });
+
+  function draw() {
+    if (c.width !== c.clientWidth || c.height !== c.clientHeight) {
+      c.width = c.clientWidth; c.height = c.clientHeight;
+      gl.viewport(0, 0, c.width, c.height);
+    }
+    gl.clearColor(0.06, 0.09, 0.16, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.DEPTH_TEST);
+
+    if (meshes.length) {
+      if (auto) ay += 0.006;
+      let m = mul(rX(ax), rY(ay));
+      m = mul(m, sc(ms));
+      m = mul(m, tr(-cx, -cy, -cz));
+      const mvp = mul(persp(0.8, c.width / c.height, 0.1, 100), mul(tr(0, 0, -zm), m));
+      gl.uniformMatrix4fv(uMVP, false, mvp);
+      gl.uniformMatrix4fv(uM, false, m);
+
+      meshes.forEach(o => {
+        gl.bindBuffer(gl.ARRAY_BUFFER, o.pb); gl.enableVertexAttribArray(aP); gl.vertexAttribPointer(aP, 3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, o.nb); gl.enableVertexAttribArray(aN); gl.vertexAttribPointer(aN, 3, gl.FLOAT, false, 0, 0);
+        if (o.ib) { gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, o.ib); gl.drawElements(gl.TRIANGLES, o.cnt, o.it, 0); }
+        else { gl.drawArrays(gl.TRIANGLES, 0, o.cnt); }
+      });
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+</script>
 </body>
 </html>
