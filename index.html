@@ -2,12 +2,12 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Робот «Магистраль-Защита»</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: #0f172a; color: #f8fafc; font-family: sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
-  header { padding: 14px; background: #0b1120; border-bottom: 1px solid #334155; text-align: center; }
+  header { padding: 14px; background: #0b1120; border-bottom: 1px solid #334155; text-align: center; z-index: 10; }
   h1 { font-size: 17px; color: #f59e0b; text-transform: uppercase; }
   p { font-size: 12px; color: #94a3b8; margin-top: 4px; }
   canvas { width: 100%; flex: 1; display: block; cursor: grab; touch-action: none; }
@@ -17,7 +17,7 @@
 <body>
 <header>
   <h1>Робот «Магистраль-Защита»</h1>
-  <p>Вращайте пальцем или мышкой • Колёсико — масштаб</p>
+  <p>1 палец / мышь — вращение • 2 пальца / колёсико — масштаб</p>
 </header>
 <div id="st">Загрузка 3D-модели...</div>
 <canvas id="c"></canvas>
@@ -53,9 +53,10 @@ if (!gl) { st.textContent = 'WebGL не поддерживается'; } else {
   const tr = (x, y, z) => new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, x,y,z,1]);
   const sc = s => new Float32Array([s,0,0,0, 0,s,0,0, 0,0,s,0, 0,0,0,1]);
 
-  let meshes = [], ay = 0.6, ax = 0.35, zm = 3.2, drag = false, lx = 0, ly = 0, auto = true;
+  let meshes = [], ay = 0.6, ax = 0.35;
+  let zm = window.innerHeight > window.innerWidth ? 4.8 : 3.2;
+  let drag = false, lx = 0, ly = 0, auto = true, pinchDist = 0;
   let cx = 0, cy = 0, cz = 0, ms = 1;
-
   fetch('./robot.glb')
     .then(r => { if (!r.ok) throw new Error('Нет файла robot.glb'); return r.arrayBuffer(); })
     .then(async b => {
@@ -103,7 +104,10 @@ if (!gl) { st.textContent = 'WebGL не поддерживается'; } else {
           const mat = gltf.materials[p.material];
           const pbr = mat && mat.pbrMetallicRoughness;
           if (pbr) {
-            if (pbr.baseColorFactor) col = [Math.pow(pbr.baseColorFactor[0], 0.45), Math.pow(pbr.baseColorFactor[1], 0.45), Math.pow(pbr.baseColorFactor[2], 0.45)];
+            if (pbr.baseColorFactor) {
+              const f = pbr.baseColorFactor;
+              col = [Math.pow(f.at(0), 0.45), Math.pow(f.at(1), 0.45), Math.pow(f.at(2), 0.45)];
+            }
             if (pbr.baseColorTexture) tex = textures[pbr.baseColorTexture.index] || null;
           }
         }
@@ -132,16 +136,48 @@ if (!gl) { st.textContent = 'WebGL не поддерживается'; } else {
       st.style.display = 'none';
     })
     .catch(e => { st.textContent = e.message; st.style.color = '#ef4444'; });
-
-  c.addEventListener('pointerdown', e => { drag = true; auto = false; lx = e.clientX; ly = e.clientY; });
-  window.addEventListener('pointerup', () => drag = false);
-  window.addEventListener('pointermove', e => {
+  c.addEventListener('mousedown', e => { drag = true; auto = false; lx = e.clientX; ly = e.clientY; });
+  window.addEventListener('mouseup', () => drag = false);
+  window.addEventListener('mousemove', e => {
     if (!drag) return;
     ay += (e.clientX - lx) * 0.01;
     ax = Math.max(-1.4, Math.min(1.4, ax + (e.clientY - ly) * 0.01));
     lx = e.clientX; ly = e.clientY;
   });
-  c.addEventListener('wheel', e => { e.preventDefault(); zm = Math.max(1.2, Math.min(8, zm + e.deltaY * 0.002)); }, { passive: false });
+  c.addEventListener('wheel', e => { e.preventDefault(); zm = Math.max(1.2, Math.min(10, zm + e.deltaY * 0.002)); }, { passive: false });
+
+  c.addEventListener('touchstart', e => {
+    auto = false;
+    if (e.touches.length === 1) {
+      drag = true;
+      lx = e.touches.item(0).clientX;
+      ly = e.touches.item(0).clientY;
+    } else if (e.touches.length === 2) {
+      drag = false;
+      const t0 = e.touches.item(0), t1 = e.touches.item(1);
+      pinchDist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
+    }
+  }, { passive: false });
+
+  c.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if (e.touches.length === 1 && drag) {
+      const t0 = e.touches.item(0);
+      ay += (t0.clientX - lx) * 0.012;
+      ax = Math.max(-1.4, Math.min(1.4, ax + (t0.clientY - ly) * 0.012));
+      lx = t0.clientX;
+      ly = t0.clientY;
+    } else if (e.touches.length === 2) {
+      const t0 = e.touches.item(0), t1 = e.touches.item(1);
+      const dist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
+      if (pinchDist > 0) {
+        zm = Math.max(1.2, Math.min(10, zm * (pinchDist / dist)));
+      }
+      pinchDist = dist;
+    }
+  }, { passive: false });
+
+  c.addEventListener('touchend', () => { drag = false; pinchDist = 0; });
 
   function draw() {
     if (c.width !== c.clientWidth || c.height !== c.clientHeight) {
