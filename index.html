@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D-модель: Робот «Магистраль-Защита»</title>
-    <!-- Подключаем официальный 3D-просмотрщик от Google -->
-    <script type="module" src="https://googleapis.com"></script>
+    <script type="module" src="https://unpkg.com"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -32,6 +31,15 @@
             background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
             --poster-color: transparent;
         }
+        .status {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #94a3b8;
+            font-size: 14px;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -41,18 +49,31 @@
         <p>Вращайте одним пальцем / мышкой • Приближайте двумя пальцами / колёсиком</p>
     </header>
 
-    <!-- Интерактивная 3D-модель с поддержкой анимации и AR -->
+    <div class="status" id="loader-text">Загрузка 3D-модели...</div>
+
     <model-viewer 
-        src="robot.glb" 
+        id="viewer"
+        src="./robot.glb" 
         alt="3D-модель робота Магистраль-Защита"
         camera-controls 
         auto-rotate 
-        autoplay
         shadow-intensity="1"
-        exposure="1.1"
-        ar
-        ar-modes="webxr scene-viewer quick-look">
+        exposure="1.2"
+        camera-target="auto auto auto"
+        bounds="tight">
     </model-viewer>
+
+    <script>
+        const viewer = document.getElementById('viewer');
+        const loader = document.getElementById('loader-text');
+        viewer.addEventListener('load', () => {
+            loader.style.display = 'none';
+        });
+        viewer.addEventListener('error', () => {
+            loader.textContent = 'Ошибка загрузки модели. Проверьте файл robot.glb';
+            loader.style.color = '#ef4444';
+        });
+    </script>
 
 </body>
 </html>
