@@ -34,7 +34,6 @@
   /* Адаптация под Android и узкие экраны */
   @media (max-width: 700px) {
     .main { flex-direction: column; }
-    .specs-badge { top: 8px; left: 8px; padding: 5px 9px; font-size: 11px; }
     .sidebar { 
       width: 100%; 
       height: auto;
@@ -67,11 +66,6 @@
 
 <div class="main">
   <div class="viewer-wrap">
-    <div class="specs-badge">
-      Длина: <span>2,8 м</span><br>
-      Ширина: <span>1,6 м</span><br>
-      Высота: <span>1,6 м</span>
-    </div>
     <div id="st">Загрузка 3D-модели...</div>
     <canvas id="c"></canvas>
   </div>
