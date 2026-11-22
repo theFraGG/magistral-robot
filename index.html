@@ -6,438 +6,116 @@
 <title>Робот «Магистраль-Защита» — 3D-презентация</title>
 <script type="module" src="https://googleapis.com"></script>
 <style>
-  * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-  }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: #0b0f14;
-    color: #e2e8f0;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* Шапка */
-  header {
-    padding: 16px 24px;
-    background: #11161d;
-    border-bottom: 1px solid #1e293b;
-  }
-  .badge {
-    display: inline-block;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    color: #38bdf8;
-    background: rgba(56, 189, 248, 0.12);
-    border: 1px solid rgba(56, 189, 248, 0.3);
-    padding: 3px 8px;
-    border-radius: 6px;
-    margin-bottom: 6px;
-  }
-  h1 {
-    font-size: 22px;
-    font-weight: 700;
-    color: #f8fafc;
-    margin-bottom: 4px;
-  }
-  .hint {
-    font-size: 13px;
-    color: #94a3b8;
-  }
-
-  /* Вкладки навигации */
-  .tabs-nav {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 12px 24px;
-    background: #0f141b;
-    border-bottom: 1px solid #1e293b;
-  }
-  .tab-btn {
-    padding: 9px 15px;
-    background: #1e293b;
-    color: #cbd5e1;
-    border: 1px solid #334155;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
-    transition: all 0.2s;
-  }
-  .tab-btn:hover {
-    background: #273549;
-    color: #fff;
-  }
-  .tab-btn.active {
-    background: #2563eb;
-    border-color: #3b82f6;
-    color: #fff;
-  }
-
-  /* Основной контейнер вкладок */
-  main {
-    flex: 1;
-    padding: 16px 24px;
-    display: flex;
-    flex-direction: column;
-  }
-  .tab-pane {
-    display: none;
-    flex: 1;
-    width: 100%;
-  }
-  .tab-pane.active {
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* Сетка 3D-модели и рендеров */
-  .workspace {
-    display: grid;
-    grid-template-columns: 1fr 300px;
-    gap: 16px;
-    flex: 1;
-    min-height: 72vh;
-  }
-  .viewer-box {
-    position: relative;
-    background: radial-gradient(circle at center, #1a2332 0%, #0d1218 100%);
-    border: 1px solid #1e293b;
-    border-radius: 12px;
-    overflow: hidden;
-    min-height: 450px;
-  }
-  model-viewer {
-    width: 100%;
-    height: 100%;
-    min-height: 72vh;
-    --poster-color: transparent;
-  }
-  .loader-msg {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: #94a3b8;
-    font-size: 14px;
-    pointer-events: none;
-  }
-
-  /* Панель рендеров */
-  .renders-panel {
-    background: #11161d;
-    border: 1px solid #1e293b;
-    border-radius: 12px;
-    padding: 14px;
-    overflow-y: auto;
-    max-height: 75vh;
-  }
-  .renders-panel h2 {
-    font-size: 15px;
-    margin-bottom: 12px;
-    color: #f1f5f9;
-  }
-  .renders-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-  .render-card {
-    background: #18202c;
-    border: 1px solid #293548;
-    border-radius: 8px;
-    overflow: hidden;
-    cursor: pointer;
-    transition: transform 0.15s, border-color 0.15s;
-  }
-  .render-card:hover {
-    transform: translateY(-2px);
-    border-color: #38bdf8;
-  }
-  .render-card img {
-    width: 100%;
-    height: 85px;
-    object-fit: cover;
-    display: block;
-    background: #0b0f14;
-  }
-  .render-card span {
-    display: block;
-    padding: 6px 8px;
-    font-size: 12px;
-    color: #cbd5e1;
-    text-align: center;
-  }
-
-  /* Вкладки документов */
-  .doc-container {
-    background: #11161d;
-    border: 1px solid #1e293b;
-    border-radius: 12px;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-  }
-  .doc-toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 12px;
-  }
-  .doc-title {
-    font-size: 15px;
-    font-weight: 600;
-    color: #f1f5f9;
-  }
-  .doc-actions {
-    display: flex;
-    gap: 8px;
-  }
-  .btn-open, .btn-download {
-    padding: 8px 14px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    text-decoration: none;
-    color: #fff;
-  }
-  .btn-open {
-    background: #334155;
-  }
-  .btn-download {
-    background: #10b981;
-  }
-  .doc-frame {
-    width: 100%;
-    height: 72vh;
-    border: none;
-    border-radius: 8px;
-    background: #fff;
-  }
-  .drawing-view {
-    width: 100%;
-    max-height: 74vh;
-    object-fit: contain;
-    background: #fff;
-    border-radius: 8px;
-    cursor: zoom-in;
-  }
-
-  /* Лайтбокс */
-  .lightbox {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.88);
-    z-index: 1000;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
-    cursor: zoom-out;
-  }
-  .lightbox.open {
-    display: flex;
-  }
-  .lightbox img {
-    max-width: 95%;
-    max-height: 82vh;
-    border-radius: 8px;
-    background: #fff;
-  }
-  .lightbox-caption {
-    margin-top: 12px;
-    font-size: 15px;
-    font-weight: 600;
-    color: #f8fafc;
-  }
-  .lightbox-close {
-    margin-top: 4px;
-    font-size: 12px;
-    color: #94a3b8;
-  }
-
-  /* Адаптация для телефона */
-  @media (max-width: 850px) {
-    header, .tabs-nav, main {
-      padding-left: 14px;
-      padding-right: 14px;
-    }
-    .workspace {
-      grid-template-columns: 1fr;
-    }
-    model-viewer {
-      min-height: 55vh;
-    }
-    .renders-panel {
-      max-height: none;
-    }
-  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0b0f14;color:#e2e8f0;min-height:100vh;display:flex;flex-direction:column}
+  header{padding:16px 24px;background:#11161d;border-bottom:1px solid #1e293b}
+  .badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.08em;color:#38bdf8;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.3);padding:3px 8px;border-radius:6px;margin-bottom:6px}
+  h1{font-size:22px;font-weight:700;color:#f8fafc;margin-bottom:4px}
+  .hint{font-size:13px;color:#94a3b8}
+  .tabs-nav{display:flex;flex-wrap:wrap;gap:8px;padding:12px 24px;background:#0f141b;border-bottom:1px solid #1e293b}
+  .tab-btn{padding:9px 15px;background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:.2s}
+  .tab-btn:hover{background:#273549;color:#fff}
+  .tab-btn.active{background:#2563eb;border-color:#3b82f6;color:#fff}
+  main{flex:1;padding:16px 24px;display:flex;flex-direction:column}
+  .tab-pane{display:none;flex:1;width:100%}
+  .tab-pane.active{display:flex;flex-direction:column}
+  .workspace{display:grid;grid-template-columns:1fr 300px;gap:16px;flex:1;min-height:72vh}
+  .viewer-box{position:relative;background:radial-gradient(circle at center,#1a2332 0%,#0d1218 100%);border:1px solid #1e293b;border-radius:12px;overflow:hidden;min-height:450px}
+  model-viewer{width:100%;height:100%;min-height:72vh;--poster-color:transparent}
+  .poster-msg{display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:#94a3b8;font-size:14px;padding:20px;text-align:center}
+  .renders-panel{background:#11161d;border:1px solid #1e293b;border-radius:12px;padding:14px;overflow-y:auto;max-height:75vh}
+  .renders-panel h2{font-size:15px;margin-bottom:12px;color:#f1f5f9}
+  .renders-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .render-card{background:#18202c;border:1px solid #293548;border-radius:8px;overflow:hidden;cursor:pointer;transition:.15s}
+  .render-card:hover{transform:translateY(-2px);border-color:#38bdf8}
+  .render-card img{width:100%;height:85px;object-fit:cover;display:block;background:#0b0f14}
+  .render-card span{display:block;padding:6px 8px;font-size:12px;color:#cbd5e1;text-align:center}
+  .doc-container{background:#11161d;border:1px solid #1e293b;border-radius:12px;padding:16px;display:flex;flex-direction:column;flex:1}
+  .doc-toolbar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+  .doc-title{font-size:15px;font-weight:600;color:#f1f5f9}
+  .doc-actions{display:flex;gap:8px}
+  .btn-open,.btn-download{padding:8px 14px;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;color:#fff}
+  .btn-open{background:#334155}
+  .btn-download{background:#10b981}
+  .doc-frame{width:100%;height:72vh;border:none;border-radius:8px;background:#fff}
+  .drawing-view{width:100%;max-height:74vh;object-fit:contain;background:#fff;border-radius:8px;cursor:zoom-in}
+  .lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:1000;flex-direction:column;justify-content:center;align-items:center;padding:20px;cursor:zoom-out}
+  .lightbox.open{display:flex}
+  .lightbox img{max-width:95%;max-height:82vh;border-radius:8px;background:#fff}
+  .lightbox-caption{margin-top:12px;font-size:15px;font-weight:600;color:#f8fafc}
+  .lightbox-close{margin-top:4px;font-size:12px;color:#94a3b8}
+  @media(max-width:850px){header,.tabs-nav,main{padding-left:14px;padding-right:14px}.workspace{grid-template-columns:1fr}model-viewer{min-height:55vh}.renders-panel{max-height:none}}
 </style>
 </head>
 <body>
-
 <header>
   <span class="badge">3D CAD</span>
   <h1>Робот «Магистраль-Защита»</h1>
   <p class="hint">1 палец / мышь — вращение &nbsp;•&nbsp; 2 пальца / колесо — масштаб</p>
 </header>
-
 <nav class="tabs-nav">
-  <button class="tab-btn active" onclick="openTab('tab-3d', this)">3D-модель и рендеры</button>
-  <button class="tab-btn" onclick="openTab('tab-drawing', this)">Габаритный эскиз</button>
-  <button class="tab-btn" onclick="openTab('tab-spec', this)">Спецификация (ГОСТ 2.106)</button>
-  <button class="tab-btn" onclick="openTab('tab-passport', this)">Паспорт проекта</button>
-  <button class="tab-btn" onclick="openTab('tab-pz', this)">Пояснительная записка</button>
+  <button class="tab-btn active" onclick="openTab('tab-3d',this)">3D-модель и рендеры</button>
+  <button class="tab-btn" onclick="openTab('tab-drawing',this)">Габаритный эскиз</button>
+  <button class="tab-btn" onclick="openTab('tab-spec',this)">Спецификация (ГОСТ 2.106)</button>
+  <button class="tab-btn" onclick="openTab('tab-passport',this)">Паспорт проекта</button>
+  <button class="tab-btn" onclick="openTab('tab-pz',this)">Пояснительная записка</button>
 </nav>
-
 <main>
-  <!-- Вкладка 1: 3D-модель и рендеры -->
   <section id="tab-3d" class="tab-pane active">
     <div class="workspace">
       <div class="viewer-box">
-        <div class="loader-msg" id="loaderMsg">Загрузка 3D-модели...</div>
-        <model-viewer
-          id="robotViewer"
-          src="robot.glb"
-          alt="Робот Магистраль-Защита"
-          camera-controls
-          auto-rotate
-          shadow-intensity="1"
-          exposure="1"
-          onload="document.getElementById('loaderMsg').style.display='none'">
+        <model-viewer src="robot.glb" alt="Робот Магистраль-Защита" camera-controls auto-rotate shadow-intensity="1" onerror="document.getElementById('posterMsg').textContent='Ошибка загрузки robot.glb (проверьте Git LFS или экспорт в Blender)'">
+          <div slot="poster" id="posterMsg" class="poster-msg">Загрузка 3D-модели...</div>
         </model-viewer>
       </div>
-
       <aside class="renders-panel">
         <h2>Рендеры узлов</h2>
         <div class="renders-grid">
-          <div class="render-card" onclick="openLightbox('renders/main.png', 'Общий вид')">
-            <img src="renders/main.png" alt="Общий вид">
-            <span>Общий вид</span>
-          </div>
-          <div class="render-card" onclick="openLightbox('renders/scheme.png', 'Схема узлов')">
-            <img src="renders/scheme.png" alt="Схема узлов">
-            <span>Схема узлов</span>
-          </div>
-          <div class="render-card" onclick="openLightbox('renders/front.png', 'Вид спереди')">
-            <img src="renders/front.png" alt="Вид спереди">
-            <span>Вид спереди</span>
-          </div>
-          <div class="render-card" onclick="openLightbox('renders/right.png', 'Вид справа')">
-            <img src="renders/right.png" alt="Вид справа">
-            <span>Вид справа</span>
-          </div>
-          <div class="render-card" onclick="openLightbox('renders/left.png', 'Вид слева')">
-            <img src="renders/left.png" alt="Вид слева">
-            <span>Вид слева</span>
-          </div>
-          <div class="render-card" onclick="openLightbox('renders/top.png', 'Вид сверху')">
-            <img src="renders/top.png" alt="Вид сверху">
-            <span>Вид сверху</span>
-          </div>
-          <div class="render-card" onclick="openLightbox('renders/bottom.png', 'Вид снизу')">
-            <img src="renders/bottom.png" alt="Вид снизу">
-            <span>Вид снизу</span>
-          </div>
-          <div class="render-card" onclick="openLightbox('renders/back.png', 'Вид сзади')">
-            <img src="renders/back.png" alt="Вид сзади">
-            <span>Вид сзади</span>
-          </div>
+          <div class="render-card" onclick="openLightbox('renders/main.png','Общий вид')"><img src="renders/main.png" alt="Общий вид"><span>Общий вид</span></div>
+          <div class="render-card" onclick="openLightbox('renders/front.png','Вид спереди')"><img src="renders/front.png" alt="Вид спереди"><span>Вид спереди</span></div>
+          <div class="render-card" onclick="openLightbox('renders/back.png','Вид сзади')"><img src="renders/back.png" alt="Вид сзади"><span>Вид сзади</span></div>
+          <div class="render-card" onclick="openLightbox('renders/right.png','Вид справа')"><img src="renders/right.png" alt="Вид справа"><span>Вид справа</span></div>
+          <div class="render-card" onclick="openLightbox('renders/left.png','Вид слева')"><img src="renders/left.png" alt="Вид слева"><span>Вид слева</span></div>
+          <div class="render-card" onclick="openLightbox('renders/top.png','Вид сверху')"><img src="renders/top.png" alt="Вид сверху"><span>Вид сверху</span></div>
+          <div class="render-card" onclick="openLightbox('renders/bottom.png','Вид снизу')"><img src="renders/bottom.png" alt="Вид снизу"><span>Вид снизу</span></div>
         </div>
       </aside>
     </div>
   </section>
-
-  <!-- Вкладка 2: Габаритный эскиз -->
   <section id="tab-drawing" class="tab-pane">
     <div class="doc-container">
-      <div class="doc-toolbar">
-        <span class="doc-title">КРЛП.000000.000 СБ — Габаритный эскиз</span>
-        <div class="doc-actions">
-          <a href="docs/drawing.png" target="_blank" class="btn-open">Открыть полностью</a>
-          <a href="docs/drawing.png" download class="btn-download">Скачать чертеж</a>
-        </div>
-      </div>
-      <img src="docs/drawing.png" alt="Габаритный эскиз" class="drawing-view" onclick="openLightbox('docs/drawing.png', 'Габаритный эскиз КРЛП.000000.000 СБ')">
+      <div class="doc-toolbar"><span class="doc-title">КРЛП.000000.000 СБ — Габаритный эскиз</span><div class="doc-actions"><a href="docs/drawing.png" target="_blank" class="btn-open">Открыть полностью</a><a href="docs/drawing.png" download class="btn-download">Скачать чертеж</a></div></div>
+      <img src="docs/drawing.png" alt="Габаритный эскиз" class="drawing-view" onclick="openLightbox('docs/drawing.png','Габаритный эскиз КРЛП.000000.000 СБ')">
     </div>
   </section>
-
-  <!-- Вкладка 3: Спецификация -->
   <section id="tab-spec" class="tab-pane">
     <div class="doc-container">
-      <div class="doc-toolbar">
-        <span class="doc-title">КРЛП.000000.000 — Спецификация по ГОСТ 2.106</span>
-        <div class="doc-actions">
-          <a href="docs/spec.pdf" target="_blank" class="btn-open">Открыть PDF</a>
-          <a href="docs/spec.pdf" download class="btn-download">Скачать</a>
-        </div>
-      </div>
+      <div class="doc-toolbar"><span class="doc-title">КРЛП.000000.000 — Спецификация по ГОСТ 2.106</span><div class="doc-actions"><a href="docs/spec.pdf" target="_blank" class="btn-open">Открыть PDF</a><a href="docs/spec.pdf" download class="btn-download">Скачать</a></div></div>
       <iframe src="docs/spec.pdf" class="doc-frame"></iframe>
     </div>
   </section>
-
-  <!-- Вкладка 4: Паспорт проекта -->
   <section id="tab-passport" class="tab-pane">
     <div class="doc-container">
-      <div class="doc-toolbar">
-        <span class="doc-title">Паспорт проекта «Магистраль-Защита»</span>
-        <div class="doc-actions">
-                    <a href="docs/passport.pdf" download class="btn-download">Скачать</a>
-        </div>
-      </div>
+      <div class="doc-toolbar"><span class="doc-title">Паспорт проекта «Магистраль-Защита»</span><div class="doc-actions"><a href="docs/passport.pdf" target="_blank" class="btn-open">Открыть PDF</a><a href="docs/passport.pdf" download class="btn-download">Скачать</a></div></div>
       <iframe src="docs/passport.pdf" class="doc-frame"></iframe>
     </div>
   </section>
-
-  <!-- Вкладка 5: Пояснительная записка -->
   <section id="tab-pz" class="tab-pane">
     <div class="doc-container">
-      <div class="doc-toolbar">
-        <span class="doc-title">КРЛП.000000.000 ПЗ — Пояснительная записка</span>
-        <div class="doc-actions">
-          <a href="docs/pz.pdf" target="_blank" class="btn-open">Открыть PDF</a>
-          <a href="docs/pz.pdf" download class="btn-download">Скачать</a>
-        </div>
-      </div>
+      <div class="doc-toolbar"><span class="doc-title">КРЛП.000000.000 ПЗ — Пояснительная записка</span><div class="doc-actions"><a href="docs/pz.pdf" target="_blank" class="btn-open">Открыть PDF</a><a href="docs/pz.pdf" download class="btn-download">Скачать</a></div></div>
       <iframe src="docs/pz.pdf" class="doc-frame"></iframe>
     </div>
   </section>
 </main>
-
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
   <img id="lightboxImg" src="" alt="Увеличенный вид">
   <div class="lightbox-caption" id="lightboxCaption">Увеличенный вид</div>
   <div class="lightbox-close">Нажмите в любом месте, чтобы закрыть</div>
 </div>
-
 <script>
-  function openTab(tabId, btn) {
-    document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-    btn.classList.add('active');
-  }
-
-  function openLightbox(src, title) {
-    document.getElementById('lightboxImg').src = src;
-    document.getElementById('lightboxCaption').textContent = title;
-    document.getElementById('lightbox').classList.add('open');
-  }
-
-  function closeLightbox() {
-    document.getElementById('lightbox').classList.remove('open');
-  }
+  function openTab(id,btn){document.querySelectorAll('.tab-pane').forEach(e=>e.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(e=>e.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active')}
+  function openLightbox(s,t){document.getElementById('lightboxImg').src=s;document.getElementById('lightboxCaption').textContent=t;document.getElementById('lightbox').classList.add('open')}
+  function closeLightbox(){document.getElementById('lightbox').classList.remove('open')}
 </script>
-
 </body>
 </html>
-
