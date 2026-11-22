@@ -2,435 +2,438 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Робот «Магистраль-Защита» — 3D-презентация</title>
+<script type="module" src="https://googleapis.com"></script>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { 
-    background-color: #090d16;
-    background-image: 
-      radial-gradient(circle at 50% 45%, rgba(245, 158, 11, 0.08) 0%, transparent 60%),
-      linear-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
-    background-size: 100% 100%, 36px 36px, 36px 36px;
-    color: #f8fafc; 
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
-    overflow: hidden; 
-    height: 100vh; 
-    height: 100dvh;
-    display: flex; 
-    flex-direction: column; 
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
   }
-
-  header { 
-    padding: 12px 20px; 
-    background: rgba(11, 15, 25, 0.78); 
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08); 
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0b0f14;
+    color: #e2e8f0;
+    min-height: 100vh;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    z-index: 10; 
+    flex-direction: column;
   }
-  .brand { display: flex; align-items: center; gap: 10px; }
-  .badge { 
-    background: rgba(245, 158, 11, 0.14); 
-    color: #fbbf24; 
-    border: 1px solid rgba(245, 158, 11, 0.35); 
-    padding: 3px 8px; 
-    border-radius: 6px; 
-    font-size: 10px; 
-    font-weight: 700; 
-    letter-spacing: 0.8px; 
-    text-transform: uppercase;
+
+  /* Шапка */
+  header {
+    padding: 16px 24px;
+    background: #11161d;
+    border-bottom: 1px solid #1e293b;
   }
-  h1 { font-size: 16px; font-weight: 600; color: #f8fafc; letter-spacing: 0.3px; }
-  .hint-bar { font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 12px; }
-  .hint-pill {
-    background: rgba(30, 41, 59, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    padding: 4px 10px;
-    border-radius: 20px;
+  .badge {
+    display: inline-block;
     font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    padding: 3px 8px;
+    border-radius: 6px;
+    margin-bottom: 6px;
   }
-  
-  .main { display: flex; flex: 1; overflow: hidden; position: relative; min-height: 0; }
-  .viewer-wrap { flex: 1; position: relative; display: flex; min-height: 0; }
-  canvas { width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
-  canvas:active { cursor: grabbing; }
-  
-  #st { 
-    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-    background: rgba(15, 23, 42, 0.85);
-    border: 1px solid rgba(245, 158, 11, 0.3);
-    padding: 12px 20px;
-    border-radius: 10px;
-    color: #fbbf24; 
-    font-size: 13px; 
-    text-align: center; 
-    pointer-events: none;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #f8fafc;
+    margin-bottom: 4px;
+  }
+  .hint {
+    font-size: 13px;
+    color: #94a3b8;
   }
 
-  .sidebar { 
-    width: 176px; 
-    background: rgba(11, 15, 25, 0.75); 
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-left: 1px solid rgba(255, 255, 255, 0.08); 
-    padding: 12px; 
-    overflow-y: auto; 
-    display: flex; 
-    flex-direction: column; 
-    gap: 10px; 
-    z-index: 5; 
+  /* Вкладки навигации */
+  .tabs-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 24px;
+    background: #0f141b;
+    border-bottom: 1px solid #1e293b;
   }
-  .sidebar::-webkit-scrollbar { width: 4px; height: 4px; }
-  .sidebar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-  
-  .sidebar-title { 
-    font-size: 11px; 
+  .tab-btn {
+    padding: 9px 15px;
+    background: #1e293b;
+    color: #cbd5e1;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
     font-weight: 600;
-    color: #94a3b8; 
-    text-transform: uppercase; 
-    letter-spacing: 0.8px; 
-    padding-bottom: 4px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    transition: all 0.2s;
+  }
+  .tab-btn:hover {
+    background: #273549;
+    color: #fff;
+  }
+  .tab-btn.active {
+    background: #2563eb;
+    border-color: #3b82f6;
+    color: #fff;
   }
 
-  .card {
+  /* Основной контейнер вкладок */
+  main {
+    flex: 1;
+    padding: 16px 24px;
+    display: flex;
+    flex-direction: column;
+  }
+  .tab-pane {
+    display: none;
+    flex: 1;
+    width: 100%;
+  }
+  .tab-pane.active {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Сетка 3D-модели и рендеров */
+  .workspace {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 16px;
+    flex: 1;
+    min-height: 72vh;
+  }
+  .viewer-box {
     position: relative;
+    background: radial-gradient(circle at center, #1a2332 0%, #0d1218 100%);
+    border: 1px solid #1e293b;
+    border-radius: 12px;
+    overflow: hidden;
+    min-height: 450px;
+  }
+  model-viewer {
+    width: 100%;
+    height: 100%;
+    min-height: 72vh;
+    --poster-color: transparent;
+  }
+  .loader-msg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #94a3b8;
+    font-size: 14px;
+    pointer-events: none;
+  }
+
+  /* Панель рендеров */
+  .renders-panel {
+    background: #11161d;
+    border: 1px solid #1e293b;
+    border-radius: 12px;
+    padding: 14px;
+    overflow-y: auto;
+    max-height: 75vh;
+  }
+  .renders-panel h2 {
+    font-size: 15px;
+    margin-bottom: 12px;
+    color: #f1f5f9;
+  }
+  .renders-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .render-card {
+    background: #18202c;
+    border: 1px solid #293548;
     border-radius: 8px;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.12);
     cursor: pointer;
-    transition: all 0.25s ease;
-    background: #131b2e;
-    flex-shrink: 0;
+    transition: transform 0.15s, border-color 0.15s;
   }
-  .card:hover { 
-    border-color: #f59e0b; 
-    transform: translateY(-2px); 
-    box-shadow: 0 6px 16px rgba(245, 158, 11, 0.2); 
+  .render-card:hover {
+    transform: translateY(-2px);
+    border-color: #38bdf8;
   }
-  .card img { 
-    width: 100%; 
-    display: block; 
-    object-fit: cover; 
-    aspect-ratio: 4/3; 
+  .render-card img {
+    width: 100%;
+    height: 85px;
+    object-fit: cover;
+    display: block;
+    background: #0b0f14;
   }
-  .card-label {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(to top, rgba(9, 13, 22, 0.92), transparent);
-    padding: 14px 8px 5px 8px;
-    font-size: 11px;
-    font-weight: 500;
-    color: #e2e8f0;
+  .render-card span {
+    display: block;
+    padding: 6px 8px;
+    font-size: 12px;
+    color: #cbd5e1;
+    text-align: center;
   }
 
-  @media (max-width: 700px) {
-    header { padding: 10px 14px; flex-direction: column; gap: 4px; }
-    h1 { font-size: 15px; }
-    .hint-pill { font-size: 10px; padding: 2px 8px; }
-    .main { flex-direction: column; }
-    .sidebar { 
-      width: 100%; 
-      height: auto;
-      min-height: 104px;
-      flex-direction: row; 
-      border-left: none; 
-      border-top: 1px solid rgba(255, 255, 255, 0.08); 
-      overflow-x: auto; 
-      overflow-y: hidden; 
-      align-items: center; 
-      padding: 8px 12px calc(18px + env(safe-area-inset-bottom, 0px)) 12px;
-      gap: 10px;
-    }
-    .sidebar-title { display: none; }
-    .card { width: 105px; }
-  }
-
-  .modal { 
-    display: none; position: fixed; inset: 0; 
-    background: rgba(6, 9, 16, 0.92); 
-    backdrop-filter: blur(8px);
-    z-index: 100; 
+  /* Вкладки документов */
+  .doc-container {
+    background: #11161d;
+    border: 1px solid #1e293b;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
     flex-direction: column;
-    justify-content: center; 
-    align-items: center; 
-    padding: 20px; 
-    cursor: zoom-out; 
+    flex: 1;
   }
-  .modal.open { display: flex; }
-  .modal img { 
-    max-width: 94%; max-height: 80dvh; 
-    border-radius: 12px; 
-    border: 1px solid rgba(245, 158, 11, 0.5); 
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8); 
+  .doc-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
   }
-  .modal-caption {
-    margin-top: 14px;
-    color: #f8fafc;
+  .doc-title {
     font-size: 15px;
     font-weight: 600;
+    color: #f1f5f9;
   }
-  .modal-hint { margin-top: 4px; color: #94a3b8; font-size: 12px; }
+  .doc-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .btn-open, .btn-download {
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    color: #fff;
+  }
+  .btn-open {
+    background: #334155;
+  }
+  .btn-download {
+    background: #10b981;
+  }
+  .doc-frame {
+    width: 100%;
+    height: 72vh;
+    border: none;
+    border-radius: 8px;
+    background: #fff;
+  }
+  .drawing-view {
+    width: 100%;
+    max-height: 74vh;
+    object-fit: contain;
+    background: #fff;
+    border-radius: 8px;
+    cursor: zoom-in;
+  }
+
+  /* Лайтбокс */
+  .lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.88);
+    z-index: 1000;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    cursor: zoom-out;
+  }
+  .lightbox.open {
+    display: flex;
+  }
+  .lightbox img {
+    max-width: 95%;
+    max-height: 82vh;
+    border-radius: 8px;
+    background: #fff;
+  }
+  .lightbox-caption {
+    margin-top: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #f8fafc;
+  }
+  .lightbox-close {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #94a3b8;
+  }
+
+  /* Адаптация для телефона */
+  @media (max-width: 850px) {
+    header, .tabs-nav, main {
+      padding-left: 14px;
+      padding-right: 14px;
+    }
+    .workspace {
+      grid-template-columns: 1fr;
+    }
+    model-viewer {
+      min-height: 55vh;
+    }
+    .renders-panel {
+      max-height: none;
+    }
+  }
 </style>
 </head>
 <body>
+
 <header>
-  <div class="brand">
-    <span class="badge">3D CAD</span>
-    <h1>Робот «Магистраль-Защита»</h1>
-  </div>
-  <div class="hint-bar">
-    <span class="hint-pill">1 палец / мышь — вращение</span>
-    <span class="hint-pill">2 пальца / колесо — масштаб</span>
-  </div>
+  <span class="badge">3D CAD</span>
+  <h1>Робот «Магистраль-Защита»</h1>
+  <p class="hint">1 палец / мышь — вращение &nbsp;•&nbsp; 2 пальца / колесо — масштаб</p>
 </header>
 
-<div class="main">
-  <div class="viewer-wrap">
-    <div id="st">Загрузка 3D-модели...</div>
-    <canvas id="c"></canvas>
-  </div>
-  
-  <aside class="sidebar">
-    <div class="sidebar-title">Рендеры узлов</div>
-    <div class="card" onclick="openImg('./view6.png', 'Общий вид и схема узлов')">
-      <img src="./view6.png" alt="Общий вид">
-      <div class="card-label">Схема узлов</div>
+<nav class="tabs-nav">
+  <button class="tab-btn active" onclick="openTab('tab-3d', this)">3D-модель и рендеры</button>
+  <button class="tab-btn" onclick="openTab('tab-drawing', this)">Сборочный чертеж</button>
+  <button class="tab-btn" onclick="openTab('tab-spec', this)">Спецификация (ГОСТ 2.106)</button>
+  <button class="tab-btn" onclick="openTab('tab-passport', this)">Паспорт проекта</button>
+  <button class="tab-btn" onclick="openTab('tab-pz', this)">Пояснительная записка</button>
+</nav>
+
+<main>
+  <!-- Вкладка 1: 3D-модель и рендеры -->
+  <section id="tab-3d" class="tab-pane active">
+    <div class="workspace">
+      <div class="viewer-box">
+        <div class="loader-msg" id="loaderMsg">Загрузка 3D-модели...</div>
+        <model-viewer
+          id="robotViewer"
+          src="robot.glb"
+          alt="Робот Магистраль-Защита"
+          camera-controls
+          auto-rotate
+          shadow-intensity="1"
+          exposure="1"
+          onload="document.getElementById('loaderMsg').style.display='none'">
+        </model-viewer>
+      </div>
+
+      <aside class="renders-panel">
+        <h2>Рендеры узлов</h2>
+        <div class="renders-grid">
+          <div class="render-card" onclick="openLightbox('renders/main.png', 'Общий вид')">
+            <img src="renders/main.png" alt="Общий вид">
+            <span>Общий вид</span>
+          </div>
+          <div class="render-card" onclick="openLightbox('renders/scheme.png', 'Схема узлов')">
+            <img src="renders/scheme.png" alt="Схема узлов">
+            <span>Схема узлов</span>
+          </div>
+          <div class="render-card" onclick="openLightbox('renders/front.png', 'Вид спереди')">
+            <img src="renders/front.png" alt="Вид спереди">
+            <span>Вид спереди</span>
+          </div>
+          <div class="render-card" onclick="openLightbox('renders/right.png', 'Вид справа')">
+            <img src="renders/right.png" alt="Вид справа">
+            <span>Вид справа</span>
+          </div>
+          <div class="render-card" onclick="openLightbox('renders/left.png', 'Вид слева')">
+            <img src="renders/left.png" alt="Вид слева">
+            <span>Вид слева</span>
+          </div>
+          <div class="render-card" onclick="openLightbox('renders/top.png', 'Вид сверху')">
+            <img src="renders/top.png" alt="Вид сверху">
+            <span>Вид сверху</span>
+          </div>
+          <div class="render-card" onclick="openLightbox('renders/bottom.png', 'Вид снизу')">
+            <img src="renders/bottom.png" alt="Вид снизу">
+            <span>Вид снизу</span>
+          </div>
+        </div>
+      </aside>
     </div>
-    <div class="card" onclick="openImg('./view1.png', 'Вид спереди (Блок А)')">
-      <img src="./view1.png" alt="Вид спереди">
-      <div class="card-label">Вид спереди</div>
+  </section>
+
+  <!-- Вкладка 2: Сборочный чертеж -->
+  <section id="tab-drawing" class="tab-pane">
+    <div class="doc-container">
+      <div class="doc-toolbar">
+        <span class="doc-title">КРЛП.000000.000 СБ — Сборочный чертеж</span>
+        <div class="doc-actions">
+          <a href="docs/drawing.png" target="_blank" class="btn-open">Открыть полностью</a>
+          <a href="docs/drawing.png" download class="btn-download">Скачать чертеж</a>
+        </div>
+      </div>
+      <img src="docs/drawing.png" alt="Сборочный чертеж" class="drawing-view" onclick="openLightbox('docs/drawing.png', 'Сборочный чертеж КРЛП.000000.000 СБ')">
     </div>
-    <div class="card" onclick="openImg('./view2.png', 'Вид справа')">
-      <img src="./view2.png" alt="Вид справа">
-      <div class="card-label">Вид справа</div>
+  </section>
+
+  <!-- Вкладка 3: Спецификация -->
+  <section id="tab-spec" class="tab-pane">
+    <div class="doc-container">
+      <div class="doc-toolbar">
+        <span class="doc-title">КРЛП.000000.000 — Спецификация по ГОСТ 2.106</span>
+        <div class="doc-actions">
+          <a href="docs/spec.pdf" target="_blank" class="btn-open">Открыть PDF</a>
+          <a href="docs/spec.pdf" download class="btn-download">Скачать</a>
+        </div>
+      </div>
+      <iframe src="docs/spec.pdf" class="doc-frame"></iframe>
     </div>
-    <div class="card" onclick="openImg('./view3.png', 'Вид слева')">
-      <img src="./view3.png" alt="Вид слева">
-      <div class="card-label">Вид слева</div>
+  </section>
+
+  <!-- Вкладка 4: Паспорт проекта -->
+  <section id="tab-passport" class="tab-pane">
+    <div class="doc-container">
+      <div class="doc-toolbar">
+        <span class="doc-title">Паспорт проекта «Магистраль-Защита»</span>
+        <div class="doc-actions">
+                    <a href="docs/passport.pdf" download class="btn-download">Скачать</a>
+        </div>
+      </div>
+      <iframe src="docs/passport.pdf" class="doc-frame"></iframe>
     </div>
-    <div class="card" onclick="openImg('./view4.png', 'Вид сверху (Бункер и циклон)')">
-      <img src="./view4.png" alt="Вид сверху">
-      <div class="card-label">Вид сверху</div>
+  </section>
+
+  <!-- Вкладка 5: Пояснительная записка -->
+  <section id="tab-pz" class="tab-pane">
+    <div class="doc-container">
+      <div class="doc-toolbar">
+        <span class="doc-title">КРЛП.000000.000 ПЗ — Пояснительная записка</span>
+        <div class="doc-actions">
+          <a href="docs/pz.pdf" target="_blank" class="btn-open">Открыть PDF</a>
+          <a href="docs/pz.pdf" download class="btn-download">Скачать</a>
+        </div>
+      </div>
+      <iframe src="docs/pz.pdf" class="doc-frame"></iframe>
     </div>
-    <div class="card" onclick="openImg('./view5.png', 'Вид снизу (Защитная юбка)')">
-      <img src="./view5.png" alt="Вид снизу">
-      <div class="card-label">Вид снизу</div>
-    </div>
-  </aside>
+  </section>
+</main>
+
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightboxImg" src="" alt="Увеличенный вид">
+  <div class="lightbox-caption" id="lightboxCaption">Увеличенный вид</div>
+  <div class="lightbox-close">Нажмите в любом месте, чтобы закрыть</div>
 </div>
 
-<div class="modal" id="modal" onclick="this.classList.remove('open')">
-  <img id="modal-img" src="" alt="Увеличенный вид">
-  <div class="modal-caption" id="modal-cap"></div>
-  <div class="modal-hint">Нажмите в любом месте, чтобы закрыть</div>
-</div>
 <script>
-function openImg(src, title) {
-  document.getElementById('modal-img').src = src;
-  document.getElementById('modal-cap').textContent = title || '';
-  document.getElementById('modal').classList.add('open');
-}
-
-const c = document.getElementById('c'), st = document.getElementById('st');
-const gl = c.getContext('webgl2') || c.getContext('webgl');
-if (!gl) { st.textContent = 'WebGL не поддерживается'; } else {
-  const vs = 'attribute vec3 p,n;attribute vec2 uv;uniform mat4 mvp,m;varying vec3 vn;varying vec2 vuv;void main(){vn=mat3(m)*n;vuv=uv;gl_Position=mvp*vec4(p,1.);}';
-  const fs = 'precision mediump float;varying vec3 vn;varying vec2 vuv;uniform vec3 uCol;uniform sampler2D uTex;uniform int uHasTex;void main(){vec3 n=normalize(vn);float d1=max(dot(n,normalize(vec3(.6,1.,.8))),0.);float d2=max(dot(n,normalize(vec3(-.6,-.4,-.5))),0.)*.35;vec3 base=uHasTex==1?texture2D(uTex,vuv).rgb*uCol:uCol;gl_FragColor=vec4(base*(.32+d1*.85+d2),1.);}';
-  const sh = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); return o; };
-  const pr = gl.createProgram();
-  gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs));
-  gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs));
-  gl.linkProgram(pr); gl.useProgram(pr);
-
-  const aP = gl.getAttribLocation(pr, 'p'), aN = gl.getAttribLocation(pr, 'n'), aUV = gl.getAttribLocation(pr, 'uv');
-  const uMVP = gl.getUniformLocation(pr, 'mvp'), uM = gl.getUniformLocation(pr, 'm');
-  const uCol = gl.getUniformLocation(pr, 'uCol'), uTex = gl.getUniformLocation(pr, 'uTex'), uHasTex = gl.getUniformLocation(pr, 'uHasTex');
-
-  const mul = (a, b) => {
-    const r = new Float32Array(16);
-    for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++)
-      r[j*4+i] = a[i]*b[j*4] + a[4+i]*b[j*4+1] + a[8+i]*b[j*4+2] + a[12+i]*b[j*4+3];
-    return r;
-  };
-  const persp = (f, a, n, fr) => {
-    const t = 1 / Math.tan(f / 2), nf = 1 / (n - fr);
-    return new Float32Array([t/a,0,0,0, 0,t,0,0, 0,0,(fr+n)*nf,-1, 0,0,2*fr*n*nf,0]);
-  };
-  const rY = a => new Float32Array([Math.cos(a),0,-Math.sin(a),0, 0,1,0,0, Math.sin(a),0,Math.cos(a),0, 0,0,0,1]);
-  const rX = a => new Float32Array([1,0,0,0, 0,Math.cos(a),Math.sin(a),0, 0,-Math.sin(a),Math.cos(a),0, 0,0,0,1]);
-  const tr = (x, y, z) => new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, x,y,z,1]);
-  const sc = s => new Float32Array([s,0,0,0, 0,s,0,0, 0,0,s,0, 0,0,0,1]);
-
-  let meshes = [], ay = 0.6, ax = 0.35;
-  let zm = window.innerHeight > window.innerWidth ? 4.8 : 3.2;
-  let drag = false, lx = 0, ly = 0, auto = true, pinchDist = 0;
-  let cx = 0, cy = 0, cz = 0, ms = 1;
-
-  fetch('./robot.glb')
-    .then(r => { if (!r.ok) throw new Error('Нет файла robot.glb'); return r.arrayBuffer(); })
-    .then(async b => {
-      const dv = new DataView(b);
-      if (dv.getUint32(0, true) !== 0x46546C67) throw new Error('Ошибка формата GLB');
-      const jl = dv.getUint32(12, true);
-      const gltf = JSON.parse(new TextDecoder().decode(new Uint8Array(b, 20, jl)));
-      const bin = b.slice(28 + jl);
-
-      const textures = [];
-      if (gltf.images && gltf.textures) {
-        for (let i = 0; i < gltf.textures.length; i++) {
-          const imgDef = gltf.images[gltf.textures[i].source];
-          if (imgDef && imgDef.bufferView !== undefined) {
-            const bv = gltf.bufferViews[imgDef.bufferView];
-            const blob = new Blob([new Uint8Array(bin, bv.byteOffset || 0, bv.byteLength)], { type: imgDef.mimeType || 'image/png' });
-            const bmp = await createImageBitmap(blob);
-            const tex = gl.createTexture();
-            gl.bindTexture(gl.TEXTURE_2D, tex);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, bmp);
-            gl.generateMipmap(gl.TEXTURE_2D);
-            textures[i] = tex;
-          }
-        }
-      }
-
-      const get = idx => {
-        const ac = gltf.accessors[idx], bv = gltf.bufferViews[ac.bufferView];
-        const off = (bv.byteOffset || 0) + (ac.byteOffset || 0);
-        const len = ac.count * ({ SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4 }[ac.type]);
-        if (ac.componentType === 5126) return new Float32Array(bin, off, len);
-        if (ac.componentType === 5123) return new Uint16Array(bin, off, len);
-        if (ac.componentType === 5125) return new Uint32Array(bin, off, len);
-      };
-
-      let minX = 1e9, minY = 1e9, minZ = 1e9, maxX = -1e9, maxY = -1e9, maxZ = -1e9;
-      gltf.meshes.forEach(m => m.primitives.forEach(p => {
-        const pos = get(p.attributes.POSITION);
-        const nrm = p.attributes.NORMAL !== undefined ? get(p.attributes.NORMAL) : pos;
-        const uvs = p.attributes.TEXCOORD_0 !== undefined ? get(p.attributes.TEXCOORD_0) : null;
-        const idx = p.indices !== undefined ? get(p.indices) : null;
-
-        let col = [0.68, 0.72, 0.78], tex = null;
-        if (p.material !== undefined && gltf.materials) {
-          const mat = gltf.materials[p.material];
-          const pbr = mat && mat.pbrMetallicRoughness;
-          if (pbr) {
-            if (pbr.baseColorFactor) {
-              const f = pbr.baseColorFactor;
-              col = [Math.pow(f.at(0), 0.45), Math.pow(f.at(1), 0.45), Math.pow(f.at(2), 0.45)];
-            }
-            if (pbr.baseColorTexture) tex = textures[pbr.baseColorTexture.index] || null;
-          }
-        }
-
-        for (let i = 0; i < pos.length; i += 3) {
-          if (pos[i] < minX) minX = pos[i]; if (pos[i] > maxX) maxX = pos[i];
-          if (pos[i+1] < minY) minY = pos[i+1]; if (pos[i+1] > maxY) maxY = pos[i+1];
-          if (pos[i+2] < minZ) minZ = pos[i+2]; if (pos[i+2] > maxZ) maxZ = pos[i+2];
-        }
-        const pb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, pb); gl.bufferData(gl.ARRAY_BUFFER, pos, gl.STATIC_DRAW);
-        const nb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, nb); gl.bufferData(gl.ARRAY_BUFFER, nrm, gl.STATIC_DRAW);
-        let uvb = null;
-        if (uvs) { uvb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, uvb); gl.bufferData(gl.ARRAY_BUFFER, uvs, gl.STATIC_DRAW); }
-        let ib = null, it = gl.UNSIGNED_SHORT, cnt = pos.length / 3;
-        if (idx) {
-          ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
-          if (idx instanceof Uint32Array) { gl.getExtension('OES_element_index_uint'); it = gl.UNSIGNED_INT; }
-          cnt = idx.length;
-        }
-        meshes.push({ pb, nb, uvb, ib, it, cnt, col, tex });
-      }));
-
-      cx = (minX + maxX) / 2; cy = (minY + maxY) / 2; cz = (minZ + maxZ) / 2;
-      const md = Math.max(maxX - minX, maxY - minY, maxZ - minZ);
-      ms = md > 0 ? 2.0 / md : 1.0;
-      st.style.display = 'none';
-    })
-    .catch(e => { st.textContent = e.message; st.style.color = '#ef4444'; });
-  c.addEventListener('mousedown', e => { drag = true; auto = false; lx = e.clientX; ly = e.clientY; });
-  window.addEventListener('mouseup', () => drag = false);
-  window.addEventListener('mousemove', e => {
-    if (!drag) return;
-    ay += (e.clientX - lx) * 0.01;
-    ax = Math.max(-1.4, Math.min(1.4, ax + (e.clientY - ly) * 0.01));
-    lx = e.clientX; ly = e.clientY;
-  });
-  c.addEventListener('wheel', e => { e.preventDefault(); zm = Math.max(1.2, Math.min(10, zm + e.deltaY * 0.002)); }, { passive: false });
-
-  c.addEventListener('touchstart', e => {
-    auto = false;
-    if (e.touches.length === 1) {
-      drag = true;
-      lx = e.touches.item(0).clientX;
-      ly = e.touches.item(0).clientY;
-    } else if (e.touches.length === 2) {
-      drag = false;
-      const t0 = e.touches.item(0), t1 = e.touches.item(1);
-      pinchDist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
-    }
-  }, { passive: false });
-
-  c.addEventListener('touchmove', e => {
-    e.preventDefault();
-    if (e.touches.length === 1 && drag) {
-      const t0 = e.touches.item(0);
-      ay += (t0.clientX - lx) * 0.012;
-      ax = Math.max(-1.4, Math.min(1.4, ax + (t0.clientY - ly) * 0.012));
-      lx = t0.clientX;
-      ly = t0.clientY;
-    } else if (e.touches.length === 2) {
-      const t0 = e.touches.item(0), t1 = e.touches.item(1);
-      const dist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
-      if (pinchDist > 0) {
-        zm = Math.max(1.2, Math.min(10, zm * (pinchDist / dist)));
-      }
-      pinchDist = dist;
-    }
-  }, { passive: false });
-
-  c.addEventListener('touchend', () => { drag = false; pinchDist = 0; });
-
-  function draw() {
-    if (c.width !== c.clientWidth || c.height !== c.clientHeight) {
-      c.width = c.clientWidth; c.height = c.clientHeight;
-      gl.viewport(0, 0, c.width, c.height);
-    }
-    gl.clearColor(0, 0, 0, 0);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.enable(gl.DEPTH_TEST);
-
-    if (meshes.length) {
-      if (auto) ay += 0.006;
-      let m = mul(rX(ax), rY(ay));
-      m = mul(m, sc(ms));
-      m = mul(m, tr(-cx, -cy, -cz));
-      const mvp = mul(persp(0.8, c.width / c.height, 0.1, 100), mul(tr(0, 0, -zm), m));
-      gl.uniformMatrix4fv(uMVP, false, mvp);
-      gl.uniformMatrix4fv(uM, false, m);
-
-      meshes.forEach(o => {
-        gl.bindBuffer(gl.ARRAY_BUFFER, o.pb); gl.enableVertexAttribArray(aP); gl.vertexAttribPointer(aP, 3, gl.FLOAT, false, 0, 0);
-        gl.bindBuffer(gl.ARRAY_BUFFER, o.nb); gl.enableVertexAttribArray(aN); gl.vertexAttribPointer(aN, 3, gl.FLOAT, false, 0, 0);
-        if (o.uvb && aUV >= 0) { gl.bindBuffer(gl.ARRAY_BUFFER, o.uvb); gl.enableVertexAttribArray(aUV); gl.vertexAttribPointer(aUV, 2, gl.FLOAT, false, 0, 0); }
-        else if (aUV >= 0) { gl.disableVertexAttribArray(aUV); }
-        gl.uniform3fv(uCol, o.col);
-        if (o.tex) { gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, o.tex); gl.uniform1i(uTex, 0); gl.uniform1i(uHasTex, 1); }
-        else { gl.uniform1i(uHasTex, 0); }
-        if (o.ib) { gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, o.ib); gl.drawElements(gl.TRIANGLES, o.cnt, o.it, 0); }
-        else { gl.drawArrays(gl.TRIANGLES, 0, o.cnt); }
-      });
-    }
-    requestAnimationFrame(draw);
+  function openTab(tabId, btn) {
+    document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    btn.classList.add('active');
   }
-  draw();
-}
+
+  function openLightbox(src, title) {
+    document.getElementById('lightboxImg').src = src;
+    document.getElementById('lightboxCaption').textContent = title;
+    document.getElementById('lightbox').classList.add('open');
+  }
+
+  function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('open');
+  }
 </script>
+
 </body>
 </html>
+
