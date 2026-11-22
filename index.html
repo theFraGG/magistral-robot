@@ -5,97 +5,59 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
 <meta name="theme-color" content="#0b0f14">
 <title>Робот «Магистраль-Защита» — 3D-презентация</title>
-<script>
-  (function loadModelViewer() {
-    const primary = 'https://unpkg.com' + '@google/model-viewer@3.4.0/dist/model-viewer.min.js';
-    const fallback = 'https://jsdelivr.net' + 'npm/@google/model-viewer@3.4.0/dist/model-viewer.min.js';
-    const s = document.createElement('script');
-    s.type = 'module';
-    s.src = primary;
-    s.onerror = function () {
-      const fb = document.createElement('script');
-      fb.type = 'module';
-      fb.src = fallback;
-      document.head.appendChild(fb);
-    };
-    document.head.appendChild(s);
-  })();
-</script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background: #0b0f14; color: #e2e8f0;
-    min-height: 100dvh; display: flex; flex-direction: column;
-    overflow-x: hidden;
+    min-height: 100dvh; display: flex; flex-direction: column; overflow-x: hidden;
   }
-
-  /* Шапка */
   header { padding: 14px 20px; background: #11161d; border-bottom: 1px solid #1e293b; }
   .header-top { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
   .badge {
-    font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
-    color: #38bdf8; background: rgba(56, 189, 248, 0.12);
-    border: 1px solid rgba(56, 189, 248, 0.3); padding: 2px 8px; border-radius: 6px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: #38bdf8;
+    background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3);
+    padding: 2px 8px; border-radius: 6px;
   }
   h1 { font-size: 20px; font-weight: 700; color: #f8fafc; line-height: 1.2; }
   .hint { font-size: 12px; color: #94a3b8; }
 
-  /* Вкладки (на телефоне листаются свайпом вбок) */
   .tabs-nav {
-    display: flex; gap: 8px; padding: 10px 20px;
-    background: #0f141b; border-bottom: 1px solid #1e293b;
-    overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    display: flex; gap: 8px; padding: 10px 20px; background: #0f141b;
+    border-bottom: 1px solid #1e293b; overflow-x: auto; scrollbar-width: none;
     position: sticky; top: 0; z-index: 50;
   }
   .tabs-nav::-webkit-scrollbar { display: none; }
   .tab-btn {
-    flex: 0 0 auto; white-space: nowrap;
-    padding: 9px 14px; background: #1e293b; color: #cbd5e1;
-    border: 1px solid #334155; border-radius: 8px; cursor: pointer;
+    flex: 0 0 auto; white-space: nowrap; padding: 9px 14px; background: #1e293b;
+    color: #cbd5e1; border: 1px solid #334155; border-radius: 8px; cursor: pointer;
     font-size: 13px; font-weight: 600; transition: 0.2s;
   }
-  .tab-btn:active { transform: scale(0.97); }
   .tab-btn.active { background: #2563eb; border-color: #3b82f6; color: #fff; }
 
-  /* Основной контейнер */
   main { flex: 1; padding: 14px 20px; display: flex; flex-direction: column; }
   .tab-pane { display: none; flex: 1; width: 100%; }
   .tab-pane.active { display: flex; flex-direction: column; }
 
-  /* 3D-сцена + рендеры */
-  .workspace {
-    display: grid; grid-template-columns: 1fr 300px; gap: 16px;
-    flex: 1; min-height: 70vh;
-  }
+  .workspace { display: grid; grid-template-columns: 1fr 300px; gap: 16px; flex: 1; min-height: 70vh; }
   .viewer-box {
     position: relative;
     background: radial-gradient(circle at center, #1a2332 0%, #0d1218 100%);
-    border: 1px solid #1e293b; border-radius: 12px; overflow: hidden;
-    min-height: 440px;
+    border: 1px solid #1e293b; border-radius: 12px; overflow: hidden; min-height: 440px;
   }
-  model-viewer {
-    width: 100%; height: 100%; min-height: 70vh;
-    --poster-color: transparent;
-    --progress-bar-color: #38bdf8;
-    --progress-bar-height: 3px;
+  #glCanvas { width: 100%; height: 100%; min-height: 70vh; display: block; touch-action: none; cursor: grab; }
+  #glCanvas:active { cursor: grabbing; }
+  .status-overlay {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; color: #94a3b8; font-size: 14px;
+    padding: 20px; text-align: center; pointer-events: none; gap: 6px;
   }
-  .poster-msg {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    width: 100%; height: 100%; color: #94a3b8; font-size: 14px;
-    padding: 20px; text-align: center; gap: 8px;
-  }
-  .viewer-controls {
-    position: absolute; bottom: 12px; right: 12px; z-index: 10;
-    display: flex; gap: 6px;
-  }
+  .viewer-controls { position: absolute; bottom: 12px; right: 12px; z-index: 10; display: flex; gap: 6px; }
   .ctrl-btn {
-    background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(6px);
-    color: #e2e8f0; border: 1px solid #334155; border-radius: 8px;
-    padding: 7px 11px; font-size: 12px; font-weight: 600; cursor: pointer;
+    background: rgba(15, 23, 42, 0.85); color: #e2e8f0; border: 1px solid #334155;
+    border-radius: 8px; padding: 7px 11px; font-size: 12px; font-weight: 600; cursor: pointer;
   }
 
-  /* Панель рендеров */
   .renders-panel {
     background: #11161d; border: 1px solid #1e293b; border-radius: 12px;
     padding: 14px; overflow-y: auto; max-height: 74vh;
@@ -110,7 +72,6 @@
   .render-card img { width: 100%; height: 82px; object-fit: cover; display: block; background: #0b0f14; }
   .render-card span { display: block; padding: 6px; font-size: 12px; color: #cbd5e1; text-align: center; }
 
-  /* Вкладки документов */
   .doc-container {
     background: #11161d; border: 1px solid #1e293b; border-radius: 12px;
     padding: 14px; display: flex; flex-direction: column; flex: 1;
@@ -128,12 +89,8 @@
   .btn-open { background: #2563eb; }
   .btn-download { background: #10b981; }
   .doc-frame { width: 100%; height: 72vh; border: none; border-radius: 8px; background: #fff; }
-  .drawing-view {
-    width: 100%; max-height: 74vh; object-fit: contain;
-    background: #fff; border-radius: 8px; cursor: zoom-in;
-  }
+  .drawing-view { width: 100%; max-height: 74vh; object-fit: contain; background: #fff; border-radius: 8px; cursor: zoom-in; }
 
-  /* Лайтбокс */
   .lightbox {
     display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92);
     z-index: 1000; flex-direction: column; justify-content: center;
@@ -144,18 +101,13 @@
   .lightbox-caption { margin-top: 10px; font-size: 15px; font-weight: 600; color: #f8fafc; }
   .lightbox-close { margin-top: 4px; font-size: 12px; color: #94a3b8; }
 
-  /* Мобильная адаптация (смартфоны) */
   @media (max-width: 850px) {
     header, .tabs-nav, main { padding-left: 12px; padding-right: 12px; }
     h1 { font-size: 18px; }
     .workspace { grid-template-columns: 1fr; min-height: auto; }
-    .viewer-box { min-height: 54dvh; }
-    model-viewer { min-height: 54dvh; }
+    .viewer-box, #glCanvas { min-height: 54dvh; }
     .renders-panel { max-height: none; padding: 12px; }
-    .renders-grid {
-      display: flex; overflow-x: auto; gap: 10px;
-      padding-bottom: 4px; scrollbar-width: none;
-    }
+    .renders-grid { display: flex; overflow-x: auto; gap: 10px; padding-bottom: 4px; scrollbar-width: none; }
     .renders-grid::-webkit-scrollbar { display: none; }
     .render-card { flex: 0 0 135px; }
     .doc-actions { width: 100%; }
@@ -168,7 +120,7 @@
 
 <header>
   <div class="header-top">
-    <span class="badge">3D CAD</span>
+    <span class="badge">WebGL 3D</span>
     <h1>Робот «Магистраль-Защита»</h1>
   </div>
   <p class="hint">1 палец / мышь — вращение &nbsp;•&nbsp; 2 пальца / колесо — масштаб</p>
@@ -186,50 +138,24 @@
   <section id="tab-3d" class="tab-pane active">
     <div class="workspace">
       <div class="viewer-box">
-        <model-viewer
-          id="robotViewer"
-          src="robot.glb"
-          alt="Робот Магистраль-Защита"
-          camera-controls
-          touch-action="pan-y"
-          auto-rotate
-          auto-rotate-delay="1500"
-          shadow-intensity="0.8"
-          exposure="1"
-          interaction-prompt="none"
-          onerror="document.getElementById('posterMsg').textContent='Не удалось загрузить robot.glb. Проверьте, не залит ли файл через Git LFS.'">
-          <div slot="poster" id="posterMsg" class="poster-msg">Загрузка 3D-модели...</div>
-        </model-viewer>
+        <canvas id="glCanvas"></canvas>
+        <div class="status-overlay" id="glStatus">Загрузка 3D-модели robot.glb...</div>
         <div class="viewer-controls">
-          <button class="ctrl-btn" onclick="toggleRotate(this)">Пауза</button>
-          <button class="ctrl-btn" onclick="resetCamera()">Сброс вида</button>
+          <button class="ctrl-btn" id="rotBtn" onclick="toggleAutoRot()">Пауза</button>
+          <button class="ctrl-btn" onclick="resetView()">Сброс вида</button>
         </div>
       </div>
 
       <aside class="renders-panel">
         <h2>Рендеры узлов (нажмите для увеличения)</h2>
         <div class="renders-grid">
-          <div class="render-card" onclick="openLightbox('renders/main.png', 'Общий вид')">
-            <img src="renders/main.png" loading="lazy" alt="Общий вид"><span>Общий вид</span>
-          </div>
-          <div class="render-card" onclick="openLightbox('renders/front.png', 'Вид спереди')">
-            <img src="renders/front.png" loading="lazy" alt="Вид спереди"><span>Вид спереди</span>
-          </div>
-          <div class="render-card" onclick="openLightbox('renders/back.png', 'Вид сзади')">
-            <img src="renders/back.png" loading="lazy" alt="Вид сзади"><span>Вид сзади</span>
-          </div>
-          <div class="render-card" onclick="openLightbox('renders/right.png', 'Вид справа')">
-            <img src="renders/right.png" loading="lazy" alt="Вид справа"><span>Вид справа</span>
-          </div>
-          <div class="render-card" onclick="openLightbox('renders/left.png', 'Вид слева')">
-            <img src="renders/left.png" loading="lazy" alt="Вид слева"><span>Вид слева</span>
-          </div>
-          <div class="render-card" onclick="openLightbox('renders/top.png', 'Вид сверху')">
-            <img src="renders/top.png" loading="lazy" alt="Вид сверху"><span>Вид сверху</span>
-          </div>
-          <div class="render-card" onclick="openLightbox('renders/bottom.png', 'Вид снизу')">
-            <img src="renders/bottom.png" loading="lazy" alt="Вид снизу"><span>Вид снизу</span>
-          </div>
+          <div class="render-card" onclick="openLightbox('renders/main.png', 'Общий вид')"><img src="renders/main.png" loading="lazy" alt=""><span>Общий вид</span></div>
+          <div class="render-card" onclick="openLightbox('renders/front.png', 'Вид спереди')"><img src="renders/front.png" loading="lazy" alt=""><span>Вид спереди</span></div>
+          <div class="render-card" onclick="openLightbox('renders/back.png', 'Вид сзади')"><img src="renders/back.png" loading="lazy" alt=""><span>Вид сзади</span></div>
+          <div class="render-card" onclick="openLightbox('renders/right.png', 'Вид справа')"><img src="renders/right.png" loading="lazy" alt=""><span>Вид справа</span></div>
+          <div class="render-card" onclick="openLightbox('renders/left.png', 'Вид слева')"><img src="renders/left.png" loading="lazy" alt=""><span>Вид слева</span></div>
+          <div class="render-card" onclick="openLightbox('renders/top.png', 'Вид сверху')"><img src="renders/top.png" loading="lazy" alt=""><span>Вид сверху</span></div>
+          <div class="render-card" onclick="openLightbox('renders/bottom.png', 'Вид снизу')"><img src="renders/bottom.png" loading="lazy" alt=""><span>Вид снизу</span></div>
         </div>
       </aside>
     </div>
@@ -306,25 +232,229 @@
     document.getElementById('lightboxCaption').textContent = title;
     document.getElementById('lightbox').classList.add('open');
   }
-  function closeLightbox() {
-    document.getElementById('lightbox').classList.remove('open');
+  function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
+
+  // === ВСТРОЕННЫЙ ДВИЖОК WEBGL ДЛЯ .GLB ===
+  let yaw = 0.65, pitch = 0.35, zoom = 2.4, autoRot = true;
+  function toggleAutoRot() {
+    autoRot = !autoRot;
+    document.getElementById('rotBtn').textContent = autoRot ? 'Пауза' : 'Вращать';
   }
-  function toggleRotate(btn) {
-    const v = document.getElementById('robotViewer');
-    if (v.hasAttribute('auto-rotate')) {
-      v.removeAttribute('auto-rotate');
-      btn.textContent = 'Вращать';
-    } else {
-      v.setAttribute('auto-rotate', '');
-      btn.textContent = 'Пауза';
+  function resetView() { yaw = 0.65; pitch = 0.35; zoom = 2.4; }
+
+  (async function initGLBViewer() {
+    const canvas = document.getElementById('glCanvas');
+    const status = document.getElementById('glStatus');
+    const gl = canvas.getContext('webgl', { antialias: true });
+    if (!gl) { status.textContent = 'Браузер не поддерживает WebGL'; return; }
+
+    const vs = `
+      attribute vec3 aPos; attribute vec3 aNorm;
+      uniform mat4 uMVP; uniform mat3 uNormMat;
+      varying vec3 vN;
+      void main() { vN = normalize(uNormMat * aNorm); gl_Position = uMVP * vec4(aPos, 1.0); }
+    `;
+    const fs = `
+      precision mediump float;
+      varying vec3 vN; uniform vec4 uColor;
+      void main() {
+        vec3 n = normalize(vN);
+        float d1 = max(dot(n, normalize(vec3(0.6, 0.9, 0.7))), 0.0);
+        float d2 = max(dot(n, normalize(vec3(-0.7, -0.3, -0.5))), 0.0);
+        vec3 lit = uColor.rgb * (0.35 + 0.65 * d1 + 0.25 * d2);
+        gl_FragColor = vec4(lit, 1.0);
+      }
+    `;
+    function sh(t, s) { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); return o; }
+    const prog = gl.createProgram();
+    gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs));
+    gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fs));
+    gl.linkProgram(prog); gl.useProgram(prog);
+
+    const aPos = gl.getAttribLocation(prog, 'aPos');
+    const aNorm = gl.getAttribLocation(prog, 'aNorm');
+    const uMVP = gl.getUniformLocation(prog, 'uMVP');
+    const uNormMat = gl.getUniformLocation(prog, 'uNormMat');
+    const uColor = gl.getUniformLocation(prog, 'uColor');
+
+    let buf;
+    try {
+      const res = await fetch('robot.glb');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      buf = await res.arrayBuffer();
+    } catch (e) {
+      status.textContent = 'Файл robot.glb не найден (' + e.message + ')'; return;
     }
-  }
-  function resetCamera() {
-    const v = document.getElementById('robotViewer');
-    v.cameraOrbit = 'auto auto auto';
-    v.fieldOfView = 'auto';
-  }
+
+    const dv = new DataView(buf);
+    if (dv.getUint32(0, true) !== 0x46546C67) {
+      status.textContent = 'robot.glb повреждён или залит через Git LFS'; return;
+    }
+
+    let offset = 12, json = null, bin = null;
+    while (offset < buf.byteLength) {
+      const len = dv.getUint32(offset, true);
+      const type = dv.getUint32(offset + 4, true);
+      const chunk = buf.slice(offset + 8, offset + 8 + len);
+      if (type === 0x4E4F534A) json = JSON.parse(new TextDecoder().decode(chunk));
+      else if (type === 0x004E4942) bin = chunk;
+      offset += 8 + len;
+    }
+
+    if (json.extensionsRequired && json.extensionsRequired.includes('KHR_draco_mesh_compression')) {
+      status.textContent = 'Модель сжата Draco. Экспортируйте из Blender без галочки Compression.'; return;
+    }
+
+    function getAcc(idx) {
+      const acc = json.accessors[idx];
+      const bv = json.bufferViews[acc.bufferView];
+      const byteOff = (bv.byteOffset || 0) + (acc.byteOffset || 0);
+      const comps = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4 }[acc.type];
+      const stride = bv.byteStride || 0;
+      const arr = new Float32Array(acc.count * comps);
+      const view = new DataView(bin);
+      for (let i = 0; i < acc.count; i++) {
+        const base = byteOff + i * (stride || comps * 4);
+        for (let c = 0; c < comps; c++) arr[i * comps + c] = view.getFloat32(base + c * 4, true);
+      }
+      return arr;
+    }
+
+    function getIdx(idx) {
+      const acc = json.accessors[idx];
+      const bv = json.bufferViews[acc.bufferView];
+      const byteOff = (bv.byteOffset || 0) + (acc.byteOffset || 0);
+      if (acc.componentType === 5123) return new Uint16Array(bin, byteOff, acc.count);
+      if (acc.componentType === 5125) return new Uint32Array(bin, byteOff, acc.count);
+      return new Uint8Array(bin, byteOff, acc.count);
+    }
+
+    const parts = [];
+    let min = [1e9, 1e9, 1e9], max = [-1e9, -1e9, -1e9];
+
+    (json.meshes || []).forEach(m => {
+      (m.primitives || []).forEach(p => {
+        if (p.attributes.POSITION === undefined) return;
+        const pos = getAcc(p.attributes.POSITION);
+        for (let i = 0; i < pos.length; i += 3) {
+          for (let k = 0; k < 3; k++) {if (pos[i + k] < min[k]) min[k] = pos[i + k];
+            if (pos[i + k] > max[k]) max[k] = pos[i + k];
+          }
+        }
+        let norm;
+        if (p.attributes.NORMAL !== undefined) {
+          norm = getAcc(p.attributes.NORMAL);
+        } else {
+          norm = new Float32Array(pos.length);
+          for (let i = 0; i < norm.length; i += 3) { norm[i + 1] = 1; }
+        }
+        const pb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, pb); gl.bufferData(gl.ARRAY_BUFFER, pos, gl.STATIC_DRAW);
+        const nb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, nb); gl.bufferData(gl.ARRAY_BUFFER, norm, gl.STATIC_DRAW);
+
+        let ib = null, count = pos.length / 3, itype = 0;
+        if (p.indices !== undefined) {
+          const idxArr = getIdx(p.indices);
+          ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib);
+          gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idxArr, gl.STATIC_DRAW);
+          count = idxArr.length;
+          itype = idxArr instanceof Uint32Array ? gl.UNSIGNED_INT : (idxArr instanceof Uint16Array ? gl.UNSIGNED_SHORT : gl.UNSIGNED_BYTE);
+          if (itype === gl.UNSIGNED_INT) gl.getExtension('OES_element_index_uint');
+        }
+        let col = [0.75, 0.78, 0.82, 1.0];
+        if (p.material !== undefined && json.materials[p.material]?.pbrMetallicRoughness?.baseColorFactor) {
+          col = json.materials[p.material].pbrMetallicRoughness.baseColorFactor;
+        }
+        parts.push({ pb, nb, ib, count, itype, col });
+      });
+    });
+
+    if (!parts.length) { status.textContent = 'В файле нет геометрии'; return; }
+    status.style.display = 'none';
+
+    const cx = (min[0] + max[0]) / 2, cy = (min[1] + max[1]) / 2, cz = (min[2] + max[2]) / 2;
+    const sc = 1.6 / (Math.max(max[0] - min[0], max[1] - min[1], max[2] - min[2]) || 1);
+
+    let drag = false, lx = 0, ly = 0, pinchDist = 0;
+    canvas.addEventListener('mousedown', e => { drag = true; lx = e.clientX; ly = e.clientY; autoRot = false; document.getElementById('rotBtn').textContent = 'Вращать'; });
+    window.addEventListener('mouseup', () => drag = false);
+    window.addEventListener('mousemove', e => {
+      if (!drag) return;
+      yaw += (e.clientX - lx) * 0.008; pitch += (e.clientY - ly) * 0.008;
+      pitch = Math.max(-1.45, Math.min(1.45, pitch));
+      lx = e.clientX; ly = e.clientY;
+    });
+    canvas.addEventListener('wheel', e => { e.preventDefault(); zoom = Math.max(0.8, Math.min(6, zoom + e.deltaY * 0.0015)); }, { passive: false });
+
+    canvas.addEventListener('touchstart', e => {
+      autoRot = false; document.getElementById('rotBtn').textContent = 'Вращать';
+      if (e.touches.length === 1) { drag = true; lx = e.touches[0].clientX; ly = e.touches[0].clientY; }
+      else if (e.touches.length === 2) {
+        drag = false;
+        pinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      }
+    }, { passive: true });
+    canvas.addEventListener('touchmove', e => {
+      e.preventDefault();
+      if (e.touches.length === 1 && drag) {
+        yaw += (e.touches[0].clientX - lx) * 0.01; pitch += (e.touches[0].clientY - ly) * 0.01;
+        pitch = Math.max(-1.45, Math.min(1.45, pitch));
+        lx = e.touches[0].clientX; ly = e.touches[0].clientY;
+      } else if (e.touches.length === 2) {
+        const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        zoom = Math.max(0.8, Math.min(6, zoom * (pinchDist / (d || 1))));
+        pinchDist = d;
+      }
+    }, { passive: false });
+
+    function mul(a, b) {
+      const r = new Float32Array(16);
+      for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++)
+        r[j * 4 + i] = a[i] * b[j * 4] + a[4 + i] * b[j * 4 + 1] + a[8 + i] * b[j * 4 + 2] + a[12 + i] * b[j * 4 + 3];
+      return r;
+    }
+
+    function render() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = canvas.clientWidth * dpr, h = canvas.clientHeight * dpr;
+      if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.enable(gl.DEPTH_TEST);
+
+      if (autoRot) yaw += 0.006;
+
+      const asp = (canvas.width / (canvas.height || 1));
+      const f = 1 / Math.tan(0.42);
+      const proj = new Float32Array([f / asp, 0, 0, 0, 0, f, 0, 0, 0, 0, -1.02, -1, 0, 0, -0.2, 0]);
+      const cyw = Math.cos(yaw), syw = Math.sin(yaw), cph = Math.cos(pitch), sph = Math.sin(pitch);
+      const rotY = new Float32Array([cyw, 0, -syw, 0, 0, 1, 0, 0, syw, 0, cyw, 0, 0, 0, 0, 1]);
+      const rotX = new Float32Array([1, 0, 0, 0, 0, cph, sph, 0, 0, -sph, cph, 0, 0, 0, 0, 1]);
+      const tr = new Float32Array([sc, 0, 0, 0, 0, sc, 0, 0, 0, 0, sc, 0, -cx * sc, -cy * sc, -cz * sc, 1]);
+      const view = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, -zoom, 1]);
+
+      const mv = mul(view, mul(rotX, mul(rotY, tr)));
+      const mvp = mul(proj, mv);
+      gl.uniformMatrix4fv(uMVP, false, mvp);
+      gl.uniformMatrix3fv(uNormMat, false, new Float32Array([
+        mv[0], mv[1], mv[2], mv[4], mv[5], mv[6], mv[8], mv[9], mv[10]
+      ]));
+
+      parts.forEach(p => {
+        gl.bindBuffer(gl.ARRAY_BUFFER, p.pb);
+        gl.enableVertexAttribArray(aPos); gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, p.nb);
+        gl.enableVertexAttribArray(aNorm); gl.vertexAttribPointer(aNorm, 3, gl.FLOAT, false, 0, 0);
+        gl.uniform4fv(uColor, p.col);
+        if (p.ib) { gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, p.ib); gl.drawElements(gl.TRIANGLES, p.count, p.itype, 0); }
+        else gl.drawArrays(gl.TRIANGLES, 0, p.count);
+      });
+      requestAnimationFrame(render);
+    }
+    requestAnimationFrame(render);
+  })();
 </script>
 
 </body>
 </html>
+
