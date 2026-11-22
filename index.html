@@ -114,3 +114,168 @@
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
   <img id="lightboxImg" src="" alt=""><div class="lightbox-caption" id="lightboxCaption"></div><div class="lightbox-close">Нажмите в любом месте, чтобы закрыть</div>
 </div>
+<script>
+function openTab(id,btn){document.querySelectorAll('.tab-pane').forEach(e=>e.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(e=>e.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active')}
+function openLightbox(s,t){document.getElementById('lightboxImg').src=s;document.getElementById('lightboxCaption').textContent=t;document.getElementById('lightbox').classList.add('open')}
+function closeLightbox(){document.getElementById('lightbox').classList.remove('open')}
+
+var yaw=0.65,pitch=0.35,zoom=2.4,autoRot=true;
+function toggleAutoRot(){autoRot=!autoRot;document.getElementById('rotBtn').textContent=autoRot?'Пауза':'Вращать'}
+function resetView(){yaw=0.65;pitch=0.35;zoom=2.4}
+
+(async function(){
+  var canvas=document.getElementById('glCanvas'),status=document.getElementById('glStatus');
+  var gl=canvas.getContext('webgl',{antialias:true});
+  if(!gl){status.textContent='WebGL не поддерживается';return}
+
+  var vs='attribute vec3 aPos;attribute vec3 aNorm;attribute vec2 aUV;uniform mat4 uMVP;uniform mat3 uNormMat;varying vec3 vN;varying vec2 vUV;void main(){vN=normalize(uNormMat*aNorm);vUV=aUV;gl_Position=uMVP*vec4(aPos,1.0);}';
+  var fs='precision mediump float;varying vec3 vN;varying vec2 vUV;uniform vec4 uColor;uniform sampler2D uTex;uniform int uHasTex;void main(){vec3 n=normalize(vN);float d1=max(dot(n,normalize(vec3(0.6,0.9,0.7))),0.0);float d2=max(dot(n,normalize(vec3(-0.7,-0.3,-0.5))),0.0);vec4 base=uColor;if(uHasTex==1)base*=texture2D(uTex,vUV);gl_FragColor=vec4(base.rgb*(0.38+0.62*d1+0.25*d2),1.0);}';
+  function sh(t,s){var o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);return o}
+  var prog=gl.createProgram();gl.attachShader(prog,sh(gl.VERTEX_SHADER,vs));gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,fs));gl.linkProgram(prog);gl.useProgram(prog);
+
+  var aPos=gl.getAttribLocation(prog,'aPos'),aNorm=gl.getAttribLocation(prog,'aNorm'),aUV=gl.getAttribLocation(prog,'aUV');
+  var uMVP=gl.getUniformLocation(prog,'uMVP'),uNormMat=gl.getUniformLocation(prog,'uNormMat'),uColor=gl.getUniformLocation(prog,'uColor'),uTex=gl.getUniformLocation(prog,'uTex'),uHasTex=gl.getUniformLocation(prog,'uHasTex');
+
+  var buf;
+  try{
+    var res=await fetch('robot.glb');
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    var total=+res.headers.get('Content-Length')||0,reader=res.body.getReader(),chunks=[],loaded=0;
+    while(true){
+      var step=await reader.read();if(step.done)break;
+      chunks.push(step.value);loaded+=step.value.length;
+      var mb=(loaded/1048576).toFixed(1);
+      status.textContent=total?'Загрузка 3D: '+Math.round(loaded/total*100)+'% ('+mb+' МБ)':'Загрузка 3D: '+mb+' МБ...';
+    }
+    buf=await new Blob(chunks).arrayBuffer();
+  }catch(e){status.textContent='Ошибка загрузки robot.glb: '+e.message;return}
+
+  var dv=new DataView(buf);
+  if(dv.getUint32(0,true)!==0x46546C67){status.textContent='robot.glb залит через Git LFS или повреждён';return}
+
+  var offset=12,json=null,bin=null;
+  while(offset<buf.byteLength){
+    var len=dv.getUint32(offset,true),type=dv.getUint32(offset+4,true),chunk=buf.slice(offset+8,offset+8+len);
+    if(type===0x4E4F534A)json=JSON.parse(new TextDecoder().decode(chunk));
+    else if(type===0x004E4942)bin=chunk;
+    offset+=8+len;
+  }
+
+  if(json.extensionsRequired&&json.extensionsRequired.includes('KHR_draco_mesh_compression')){status.textContent='Модель сжата Draco — пересохраните без Compression';return}
+
+  var textures=[];
+  if(json.images&&json.textures){
+    var imgs=await Promise.all(json.images.map(function(img){return new Promise(function(resolve){
+      if(img.bufferView===undefined)return resolve(null);
+      var bv=json.bufferViews.at(img.bufferView),slice=bin.slice(bv.byteOffset||0,(bv.byteOffset||0)+bv.byteLength);
+      var url=URL.createObjectURL(new Blob([slice],{type:img.mimeType||'image/png'})),im=new Image();
+      im.onload=function(){URL.revokeObjectURL(url);resolve(im)};im.onerror=function(){resolve(null)};im.src=url;
+    })}));
+    json.textures.forEach(function(tex,i){
+      var im=imgs.at(tex.source);if(!im){textures.push(null);return}
+      var gt=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,gt);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,im);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+      textures.push(gt);
+    });
+  }
+
+  function getAcc(idx){
+    var acc=json.accessors.at(idx),bv=json.bufferViews.at(acc.bufferView),byteOff=(bv.byteOffset||0)+(acc.byteOffset||0);
+    var comps={SCALAR:1,VEC2:2,VEC3:3,VEC4:4}[acc.type],stride=bv.byteStride||0,arr=new Float32Array(acc.count*comps),view=new DataView(bin);
+    for(var i=0;i<acc.count;i++){var base=byteOff+i*(stride||comps*4);for(var c=0;c<comps;c++)arr[i*comps+c]=view.getFloat32(base+c*4,true)}
+    return arr;
+  }
+  function getIdx(idx){
+    var acc=json.accessors.at(idx),bv=json.bufferViews.at(acc.bufferView),byteOff=(bv.byteOffset||0)+(acc.byteOffset||0);
+    if(acc.componentType===5123)return new Uint16Array(bin,byteOff,acc.count);
+    if(acc.componentType===5125)return new Uint32Array(bin,byteOff,acc.count);
+    return new Uint8Array(bin,byteOff,acc.count);
+  }
+
+  var parts=[],minX=1e9,minY=1e9,minZ=1e9,maxX=-1e9,maxY=-1e9,maxZ=-1e9;
+  (json.meshes||[]).forEach(function(m){
+    (m.primitives||[]).forEach(function(p){
+      if(p.attributes.POSITION===undefined)return;
+      var pos=getAcc(p.attributes.POSITION);
+      for(var i=0;i<pos.length;i+=3){
+        var x=pos[i],y=pos[i+1],z=pos[i+2];
+        if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y;if(z<minZ)minZ=z;if(z>maxZ)maxZ=z;
+      }
+      var norm=p.attributes.NORMAL!==undefined?getAcc(p.attributes.NORMAL):new Float32Array(pos.length);
+      var uv=p.attributes.TEXCOORD_0!==undefined?getAcc(p.attributes.TEXCOORD_0):new Float32Array((pos.length/3)*2);
+      var pb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,pb);gl.bufferData(gl.ARRAY_BUFFER,pos,gl.STATIC_DRAW);
+      var nb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,nb);gl.bufferData(gl.ARRAY_BUFFER,norm,gl.STATIC_DRAW);
+      var uvb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,uvb);gl.bufferData(gl.ARRAY_BUFFER,uv,gl.STATIC_DRAW);
+
+      var ib=null,count=pos.length/3,itype=0;
+      if(p.indices!==undefined){
+        var ia=getIdx(p.indices);ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,ia,gl.STATIC_DRAW);
+        count=ia.length;itype=ia instanceof Uint32Array?gl.UNSIGNED_INT:(ia instanceof Uint16Array?gl.UNSIGNED_SHORT:gl.UNSIGNED_BYTE);
+        if(itype===gl.UNSIGNED_INT)gl.getExtension('OES_element_index_uint');
+      }
+      var col=[1,1,1,1],glTex=null;
+      if(p.material!==undefined&&json.materials.at(p.material)?.pbrMetallicRoughness){
+        var pbr=json.materials.at(p.material).pbrMetallicRoughness;
+        if(pbr.baseColorFactor)col=pbr.baseColorFactor;
+        if(pbr.baseColorTexture!==undefined)glTex=textures.at(pbr.baseColorTexture.index)||null;
+      }
+      if(!glTex&&col.at(0)===1&&col.at(1)===1&&col.at(2)===1)col=[0.75,0.78,0.82,1];
+      parts.push({pb:pb,nb:nb,uvb:uvb,ib:ib,count:count,itype:itype,col:col,glTex:glTex});
+    });
+  });
+
+  if(!parts.length){status.textContent='В файле нет геометрии';return}
+  status.style.display='none';
+
+  var cx=(minX+maxX)/2,cy=(minY+maxY)/2,cz=(minZ+maxZ)/2,sc=1.6/(Math.max(maxX-minX,maxY-minY,maxZ-minZ)||1);
+  var drag=false,lx=0,ly=0,pinch=0;
+  canvas.addEventListener('mousedown',function(e){drag=true;lx=e.clientX;ly=e.clientY;autoRot=false;document.getElementById('rotBtn').textContent='Вращать'});
+  window.addEventListener('mouseup',function(){drag=false});
+  window.addEventListener('mousemove',function(e){if(!drag)return;yaw+=(e.clientX-lx)*0.008;pitch=Math.max(-1.45,Math.min(1.45,pitch+(e.clientY-ly)*0.008));lx=e.clientX;ly=e.clientY});
+  canvas.addEventListener('wheel',function(e){e.preventDefault();zoom=Math.max(0.8,Math.min(6,zoom+e.deltaY*0.0015))},{passive:false});
+  canvas.addEventListener('touchstart',function(e){
+    autoRot=false;document.getElementById('rotBtn').textContent='Вращать';
+    var t0=e.touches.item(0),t1=e.touches.item(1);
+    if(e.touches.length===1){drag=true;lx=t0.clientX;ly=t0.clientY}
+    else if(e.touches.length===2){drag=false;pinch=Math.hypot(t0.clientX-t1.clientX,t0.clientY-t1.clientY)}
+  },{passive:true});
+  canvas.addEventListener('touchmove',function(e){
+    e.preventDefault();var t0=e.touches.item(0),t1=e.touches.item(1);
+    if(e.touches.length===1&&drag){yaw+=(t0.clientX-lx)*0.01;pitch=Math.max(-1.45,Math.min(1.45,pitch+(t0.clientY-ly)*0.01));lx=t0.clientX;ly=t0.clientY}
+    else if(e.touches.length===2&&t1){var d=Math.hypot(t0.clientX-t1.clientX,t0.clientY-t1.clientY);zoom=Math.max(0.8,Math.min(6,zoom*(pinch/(d||1))));pinch=d}
+  },{passive:false});
+
+  function mul(a,b){var r=new Float32Array(16);for(var i=0;i<4;i++)for(var j=0;j<4;j++)r[j*4+i]=a[i]*b[j*4]+a[4+i]*b[j*4+1]+a[8+i]*b[j*4+2]+a[12+i]*b[j*4+3];return r}
+  function render(){
+    var dpr=window.innerWidth<850?1:Math.min(window.devicePixelRatio||1,1.5);
+    var w=canvas.clientWidth*dpr,h=canvas.clientHeight*dpr;
+    if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}
+    gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.enable(gl.DEPTH_TEST);
+    if(autoRot)yaw+=0.006;
+    var asp=canvas.width/(canvas.height||1),f=1/Math.tan(0.42);
+    var proj=new Float32Array([f/asp,0,0,0,0,f,0,0,0,0,-1.02,-1,0,0,-0.2,0]);
+    var cyw=Math.cos(yaw),syw=Math.sin(yaw),cph=Math.cos(pitch),sph=Math.sin(pitch);
+    var rotY=new Float32Array([cyw,0,-syw,0,0,1,0,0,syw,0,cyw,0,0,0,0,1]);
+    var rotX=new Float32Array([1,0,0,0,0,cph,sph,0,0,-sph,cph,0,0,0,0,1]);
+    var tr=new Float32Array([sc,0,0,0,0,sc,0,0,0,0,sc,0,-cx*sc,-cy*sc,-cz*sc,1]);
+    var view=new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,-zoom,1]);
+    var mv=mul(view,mul(rotX,mul(rotY,tr)));
+    gl.uniformMatrix4fv(uMVP,false,mul(proj,mv));
+    gl.uniformMatrix3fv(uNormMat,false,new Float32Array([mv.at(0),mv.at(1),mv.at(2),mv.at(4),mv.at(5),mv.at(6),mv.at(8),mv.at(9),mv.at(10)]));
+    parts.forEach(function(p){
+      gl.bindBuffer(gl.ARRAY_BUFFER,p.pb);gl.enableVertexAttribArray(aPos);gl.vertexAttribPointer(aPos,3,gl.FLOAT,false,0,0);
+      gl.bindBuffer(gl.ARRAY_BUFFER,p.nb);gl.enableVertexAttribArray(aNorm);gl.vertexAttribPointer(aNorm,3,gl.FLOAT,false,0,0);
+      gl.bindBuffer(gl.ARRAY_BUFFER,p.uvb);gl.enableVertexAttribArray(aUV);gl.vertexAttribPointer(aUV,2,gl.FLOAT,false,0,0);
+      gl.uniform4fv(uColor,p.col);
+      if(p.glTex){gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,p.glTex);gl.uniform1i(uTex,0);gl.uniform1i(uHasTex,1)}else gl.uniform1i(uHasTex,0);
+      if(p.ib){gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,p.ib);gl.drawElements(gl.TRIANGLES,p.count,p.itype,0)}else gl.drawArrays(gl.TRIANGLES,0,p.count);
+    });
+    requestAnimationFrame(render);
+  }
+  requestAnimationFrame(render);
+})();
+</script>
+</body>
+</html>
