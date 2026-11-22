@@ -234,7 +234,6 @@
   }
   function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
 
-  // === ВСТРОЕННЫЙ ДВИЖОК WEBGL ДЛЯ .GLB ===
   let yaw = 0.65, pitch = 0.35, zoom = 2.4, autoRot = true;
   function toggleAutoRot() {
     autoRot = !autoRot;
@@ -249,19 +248,26 @@
     if (!gl) { status.textContent = 'Браузер не поддерживает WebGL'; return; }
 
     const vs = `
-      attribute vec3 aPos; attribute vec3 aNorm;
+      attribute vec3 aPos; attribute vec3 aNorm; attribute vec2 aUV;
       uniform mat4 uMVP; uniform mat3 uNormMat;
-      varying vec3 vN;
-      void main() { vN = normalize(uNormMat * aNorm); gl_Position = uMVP * vec4(aPos, 1.0); }
+      varying vec3 vN; varying vec2 vUV;
+      void main() {
+        vN = normalize(uNormMat * aNorm);
+        vUV = aUV;
+        gl_Position = uMVP * vec4(aPos, 1.0);
+      }
     `;
     const fs = `
       precision mediump float;
-      varying vec3 vN; uniform vec4 uColor;
+      varying vec3 vN; varying vec2 vUV;
+      uniform vec4 uColor; uniform sampler2D uTex; uniform int uHasTex;
       void main() {
         vec3 n = normalize(vN);
         float d1 = max(dot(n, normalize(vec3(0.6, 0.9, 0.7))), 0.0);
         float d2 = max(dot(n, normalize(vec3(-0.7, -0.3, -0.5))), 0.0);
-        vec3 lit = uColor.rgb * (0.35 + 0.65 * d1 + 0.25 * d2);
+        vec4 base = uColor;
+        if (uHasTex == 1) base *= texture2D(uTex, vUV);
+        vec3 lit = base.rgb * (0.38 + 0.62 * d1 + 0.25 * d2);
         gl_FragColor = vec4(lit, 1.0);
       }
     `;
@@ -273,9 +279,12 @@
 
     const aPos = gl.getAttribLocation(prog, 'aPos');
     const aNorm = gl.getAttribLocation(prog, 'aNorm');
+    const aUV = gl.getAttribLocation(prog, 'aUV');
     const uMVP = gl.getUniformLocation(prog, 'uMVP');
     const uNormMat = gl.getUniformLocation(prog, 'uNormMat');
     const uColor = gl.getUniformLocation(prog, 'uColor');
+    const uTex = gl.getUniformLocation(prog, 'uTex');
+    const uHasTex = gl.getUniformLocation(prog, 'uHasTex');
 
     let buf;
     try {
@@ -303,6 +312,34 @@
 
     if (json.extensionsRequired && json.extensionsRequired.includes('KHR_draco_mesh_compression')) {
       status.textContent = 'Модель сжата Draco. Экспортируйте из Blender без галочки Compression.'; return;
+    }
+
+    const textures = [];
+    if (json.images && json.textures) {
+      const imgs = await Promise.all(json.images.map(img => new Promise(resolve => {
+        if (img.bufferView === undefined) return resolve(null);
+        const bv = json.bufferViews[img.bufferView];
+        const slice = bin.slice(bv.byteOffset || 0, (bv.byteOffset || 0) + bv.byteLength);
+        const blob = new Blob([slice], { type: img.mimeType || 'image/png' });
+        const url = URL.createObjectURL(blob);
+        const im = new Image();
+        im.onload = () => { URL.revokeObjectURL(url); resolve(im); };
+        im.onerror = () => resolve(null);
+        im.src = url;
+      })));
+
+      json.textures.forEach((tex, i) => {
+        const im = imgs[tex.source];
+        if (!im) { textures[i] = null; return; }
+        const glTex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, glTex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, im);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        textures[i] = glTex;
+      });
     }
 
     function getAcc(idx) {
@@ -337,7 +374,8 @@
         if (p.attributes.POSITION === undefined) return;
         const pos = getAcc(p.attributes.POSITION);
         for (let i = 0; i < pos.length; i += 3) {
-          for (let k = 0; k < 3; k++) {if (pos[i + k] < min[k]) min[k] = pos[i + k];
+          for (let k = 0; k < 3; k++) {
+            if (pos[i + k] < min[k]) min[k] = pos[i + k];
             if (pos[i + k] > max[k]) max[k] = pos[i + k];
           }
         }
@@ -348,8 +386,11 @@
           norm = new Float32Array(pos.length);
           for (let i = 0; i < norm.length; i += 3) { norm[i + 1] = 1; }
         }
+        const uv = p.attributes.TEXCOORD_0 !== undefined ? getAcc(p.attributes.TEXCOORD_0) : new Float32Array((pos.length / 3) * 2);
+
         const pb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, pb); gl.bufferData(gl.ARRAY_BUFFER, pos, gl.STATIC_DRAW);
         const nb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, nb); gl.bufferData(gl.ARRAY_BUFFER, norm, gl.STATIC_DRAW);
+        const uvb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, uvb); gl.bufferData(gl.ARRAY_BUFFER, uv, gl.STATIC_DRAW);
 
         let ib = null, count = pos.length / 3, itype = 0;
         if (p.indices !== undefined) {
@@ -360,11 +401,15 @@
           itype = idxArr instanceof Uint32Array ? gl.UNSIGNED_INT : (idxArr instanceof Uint16Array ? gl.UNSIGNED_SHORT : gl.UNSIGNED_BYTE);
           if (itype === gl.UNSIGNED_INT) gl.getExtension('OES_element_index_uint');
         }
-        let col = [0.75, 0.78, 0.82, 1.0];
-        if (p.material !== undefined && json.materials[p.material]?.pbrMetallicRoughness?.baseColorFactor) {
-          col = json.materials[p.material].pbrMetallicRoughness.baseColorFactor;
+
+        let col = [1.0, 1.0, 1.0, 1.0], glTex = null;
+        if (p.material !== undefined && json.materials[p.material]?.pbrMetallicRoughness) {
+          const pbr = json.materials[p.material].pbrMetallicRoughness;
+          if (pbr.baseColorFactor) col = pbr.baseColorFactor;
+          if (pbr.baseColorTexture !== undefined) glTex = textures[pbr.baseColorTexture.index] || null;
         }
-        parts.push({ pb, nb, ib, count, itype, col });
+        if (!glTex && col[0] === 1 && col[1] === 1 && col[2] === 1) col = [0.75, 0.78, 0.82, 1.0];
+        parts.push({ pb, nb, uvb, ib, count, itype, col, glTex });
       });
     });
 
@@ -376,7 +421,7 @@
 
     let drag = false, lx = 0, ly = 0, pinchDist = 0;
     canvas.addEventListener('mousedown', e => { drag = true; lx = e.clientX; ly = e.clientY; autoRot = false; document.getElementById('rotBtn').textContent = 'Вращать'; });
-    window.addEventListener('mouseup', () => drag = false);
+       window.addEventListener('mouseup', () => drag = false);
     window.addEventListener('mousemove', e => {
       if (!drag) return;
       yaw += (e.clientX - lx) * 0.008; pitch += (e.clientY - ly) * 0.008;
@@ -424,7 +469,7 @@
 
       if (autoRot) yaw += 0.006;
 
-      const asp = (canvas.width / (canvas.height || 1));
+      const asp = canvas.width / (canvas.height || 1);
       const f = 1 / Math.tan(0.42);
       const proj = new Float32Array([f / asp, 0, 0, 0, 0, f, 0, 0, 0, 0, -1.02, -1, 0, 0, -0.2, 0]);
       const cyw = Math.cos(yaw), syw = Math.sin(yaw), cph = Math.cos(pitch), sph = Math.sin(pitch);
@@ -434,18 +479,24 @@
       const view = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, -zoom, 1]);
 
       const mv = mul(view, mul(rotX, mul(rotY, tr)));
-      const mvp = mul(proj, mv);
-      gl.uniformMatrix4fv(uMVP, false, mvp);
+      gl.uniformMatrix4fv(uMVP, false, mul(proj, mv));
       gl.uniformMatrix3fv(uNormMat, false, new Float32Array([
-        mv[0], mv[1], mv[2], mv[4], mv[5], mv[6], mv[8], mv[9], mv[10]
+        mv[0], mv[1], mv[2],
+        mv[4], mv[5], mv[6],
+        mv[8], mv[9], mv[10]
       ]));
 
       parts.forEach(p => {
-        gl.bindBuffer(gl.ARRAY_BUFFER, p.pb);
-        gl.enableVertexAttribArray(aPos); gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
-        gl.bindBuffer(gl.ARRAY_BUFFER, p.nb);
-        gl.enableVertexAttribArray(aNorm); gl.vertexAttribPointer(aNorm, 3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, p.pb); gl.enableVertexAttribArray(aPos); gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, p.nb); gl.enableVertexAttribArray(aNorm); gl.vertexAttribPointer(aNorm, 3, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, p.uvb); gl.enableVertexAttribArray(aUV); gl.vertexAttribPointer(aUV, 2, gl.FLOAT, false, 0, 0);
         gl.uniform4fv(uColor, p.col);
+        if (p.glTex) {
+          gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, p.glTex);
+          gl.uniform1i(uTex, 0); gl.uniform1i(uHasTex, 1);
+        } else {
+          gl.uniform1i(uHasTex, 0);
+        }
         if (p.ib) { gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, p.ib); gl.drawElements(gl.TRIANGLES, p.count, p.itype, 0); }
         else gl.drawArrays(gl.TRIANGLES, 0, p.count);
       });
@@ -457,4 +508,5 @@
 
 </body>
 </html>
+
 
